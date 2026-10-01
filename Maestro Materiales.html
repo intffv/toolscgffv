@@ -1,0 +1,2756 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FFV · Maestro de Materiales iConstruye</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js"></script>
+<style>
+  :root{
+    --bg:#12161c; --panel:#1a2028; --panel2:#20262f; --line:#2b333e; --line2:var(--line2);
+    --txt:#e8edf2; --mut:#8b98a8; --green:#43e5a0; --green-dim:#2a8f66; --green-txt:#0b1712;
+    --blue:#016194; --blue2:#01446a; --amber:#f0b429; --red:#ef5b6b;
+    --zebra:var(--zebra); --hover:var(--hover); --anat:var(--anat);
+    --radius:10px;
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1f5; --panel:#ffffff; --panel2:#f1f4f8; --line:#d6dde5; --line2:#e4e9ef;
+    --txt:#1d2733; --mut:#5d6d7d; --green:#0da56b; --green-dim:#0da56b; --green-txt:#ffffff;
+    --amber:#a06e00; --red:#cf3d50;
+    --zebra:#f6f9fb; --hover:rgba(13,53,84,.05); --anat:rgba(1,97,148,.06);
+  }
+  :root[data-theme="light"] .btn-dark{background:#e6ebf0; color:var(--txt); border:1px solid var(--line);}
+  :root[data-theme="light"] .ms-login{border:1px solid var(--line);}
+  :root[data-theme="light"] #loginGate{background:radial-gradient(1200px 600px at 50% -10%, #cfe3f2 0%, #eef1f5 60%);}
+  :root[data-theme="light"] mark{background:rgba(240,180,41,.35); color:#7a5200;}
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--txt);
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column; min-height:100vh;
+  }
+  button{font:inherit; cursor:pointer; border:none; border-radius:8px;}
+  input,select,textarea{
+    font:inherit; color:var(--txt); background:var(--panel2);
+    border:1px solid var(--line); border-radius:8px; padding:8px 10px; width:100%;
+  }
+  input:focus,select:focus,textarea:focus{outline:none; border-color:var(--green-dim);}
+  input[readonly]{opacity:.75;}
+  ::placeholder{color:#5c6877;}
+
+  /* ---------- Header ---------- */
+  header{
+    background:linear-gradient(135deg,var(--blue2),var(--blue));
+    padding:14px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    border-bottom:1px solid #0a3a58;
+  }
+  .brand{display:flex; flex-direction:column;}
+  .brand h1{font-size:17px; font-weight:700; letter-spacing:.2px; color:#fff;}
+  .brand small{color:#bcd9ea; font-size:11.5px;}
+  .file-chip{color:#e8edf2;
+    background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.15);
+    padding:6px 12px; border-radius:20px; font-size:12px; color:#d6e9f5;
+    display:flex; align-items:center; gap:8px; max-width:340px;
+  }
+  .file-chip .dot{width:8px; height:8px; border-radius:50%; background:var(--red); flex:none;}
+  .file-chip.ok .dot{background:var(--green);}
+  .file-chip span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .hdr-actions{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;}
+  .btn{padding:8px 14px; font-size:13px; font-weight:600; transition:filter .15s;}
+  .btn:hover{filter:brightness(1.12);}
+  .btn:disabled{opacity:.4; cursor:not-allowed; filter:none;}
+  .btn-green{background:var(--green); color:var(--green-txt);}
+  .btn-ghost{background:rgba(255,255,255,.12); color:#eaf4fb;}
+  .btn-dark{background:var(--panel2); color:var(--txt); border:1px solid var(--line);}
+  .btn-red{background:transparent; color:var(--red); border:1px solid var(--red);}
+
+  /* ---------- Layout ---------- */
+  main{flex:1; display:grid; grid-template-columns:290px 1fr 340px; gap:14px; padding:14px 20px; align-items:start;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
+  .card h2{
+    font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--mut);
+    padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .badge{margin-left:auto;}
+  .badge{
+    background:var(--panel2); border:1px solid var(--line); color:var(--mut);
+    font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;
+  }
+
+  /* ---------- Árbol ---------- */
+  #treePanel{position:sticky; top:14px; max-height:calc(100vh - 100px); display:flex; flex-direction:column;}
+  #tree{overflow-y:auto; padding:8px;}
+  .t-fam>.t-row{font-weight:700;}
+  .t-row{
+    display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:7px;
+    cursor:pointer; font-size:13px; user-select:none;
+  }
+  .t-row:hover{background:var(--panel2);}
+  .t-row.sel{background:rgba(67,229,160,.13); color:var(--green); box-shadow:inset 0 0 0 1px rgba(67,229,160,.35);}
+  .t-row .car{width:14px; flex:none; text-align:center; color:var(--mut); font-size:10px; transition:transform .15s;}
+  .t-fam.open>.t-row .car{transform:rotate(90deg);}
+  .t-row .cod{color:var(--mut); font-size:11.5px; font-family:ui-monospace,Menlo,Consolas,monospace; flex:none;}
+  .t-row.sel .cod{color:var(--green);}
+  .t-row .lbl{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .t-row .n{color:var(--mut); font-size:11px; flex:none;}
+  .t-kids{display:none; margin-left:16px; border-left:1px solid var(--line); padding-left:4px;}
+  .t-fam.open>.t-kids{display:block;}
+
+  /* ---------- Tabla ---------- */
+  #midPanel{min-width:0;}
+  .toolbar{display:flex; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap;}
+  .toolbar input[type=search]{flex:2; min-width:180px;}
+  .toolbar select{flex:1; min-width:120px; width:auto;}
+  .tbl-wrap{overflow-x:auto;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{
+    text-align:left; padding:9px 12px; color:var(--mut); font-size:11px; text-transform:uppercase;
+    letter-spacing:.5px; border-bottom:1px solid var(--line); white-space:nowrap; background:var(--panel);
+    position:sticky; top:0;
+  }
+  td{padding:8px 12px; border-bottom:1px solid var(--line2); vertical-align:top;}
+  tr:hover td{background:var(--hover);}
+  td.mono{font-family:ui-monospace,Menlo,Consolas,monospace; white-space:nowrap;}
+  .pill{font-size:11px; padding:2px 8px; border-radius:10px; font-weight:600; white-space:nowrap;}
+  .pill.vig{background:rgba(67,229,160,.14); color:var(--green);}
+  .pill.nue{background:rgba(1,151,231,.18); color:#5fc0f2;}
+  .pill.mod{background:rgba(240,180,41,.15); color:var(--amber);}
+  .pill.anu{background:rgba(239,91,107,.15); color:var(--red);}
+  .pill.dup{background:rgba(239,91,107,.15); color:var(--red);}
+  .rowbtn{background:none; color:var(--mut); font-size:12px; padding:2px 6px; border:1px solid var(--line); border-radius:6px; margin-right:4px;}
+  .rowbtn:hover{color:var(--txt); border-color:var(--mut);}
+  .empty{padding:40px 20px; text-align:center; color:var(--mut);}
+  .empty b{color:var(--txt);}
+
+  /* ---------- Panel creación ---------- */
+  #rightPanel{position:sticky; top:14px; max-height:calc(100vh - 100px); overflow-y:auto;}
+  .form{padding:14px; display:flex; flex-direction:column; gap:12px;}
+  .fld label{display:block; font-size:11.5px; color:var(--mut); margin-bottom:5px; text-transform:uppercase; letter-spacing:.4px;}
+  .rama-box{
+    background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    font-size:12.5px; color:var(--mut);
+  }
+  .rama-box b{color:var(--txt); display:block; font-size:13px;}
+  .code-row{display:flex; gap:8px; align-items:center;}
+  .code-row input{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:16px; font-weight:700; letter-spacing:1px; color:var(--green);}
+  .hint{font-size:11.5px; color:var(--mut); margin-top:4px;}
+  .hint.warn{color:var(--amber);}
+  .hint.err{color:var(--red);}
+  .chk{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--mut); cursor:pointer;}
+  .chk input{width:auto;}
+
+  /* ---------- Modales ---------- */
+  .modal{position:fixed; inset:0; background:rgba(6,9,13,.72); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;}
+  .modal[hidden]{display:none !important;}
+  .modal .box{background:var(--panel); border:1px solid var(--line); border-radius:14px; width:100%; max-width:640px; max-height:88vh; display:flex; flex-direction:column;}
+  .modal .box.wide{max-width:960px;}
+  .modal h3{padding:16px 18px; border-bottom:1px solid var(--line); font-size:15px; display:flex; align-items:center; gap:10px;}
+  .modal .body{padding:16px 18px; overflow-y:auto;}
+  .modal .foot{padding:14px 18px; border-top:1px solid var(--line); display:flex; gap:10px; justify-content:flex-end;}
+  .kv{display:grid; grid-template-columns:170px 1fr; gap:6px 14px; font-size:13.5px;}
+  .kv dt{color:var(--mut);}
+  .kv dd{font-weight:600;}
+  .kv dd.mono{font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--green); font-size:15px;}
+  .simwarn{margin-top:14px; background:rgba(240,180,41,.08); border:1px solid rgba(240,180,41,.4); border-radius:8px; padding:10px 12px; font-size:12.5px; color:var(--amber);}
+  .simwarn ul{margin:6px 0 0 18px; color:var(--txt);}
+
+  /* barra de carga */
+  #loadbar{height:4px; background:var(--panel2); border-radius:2px; overflow:hidden; margin:0 20px; display:none;}
+  #loadbar .fill{height:100%; width:0; background:var(--green); transition:width 700ms cubic-bezier(.23,1,.32,1);}
+
+  /* overlay de carga SharePoint */
+  #spLoading{position:fixed; inset:0; background:rgba(10,14,19,.88); z-index:80;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;}
+  #spLoading[hidden], #loginGate[hidden]{display:none !important;}
+  .spinner{width:52px; height:52px; border-radius:50%;
+    border:4px solid var(--panel2); border-top-color:var(--green);
+    animation:spin .9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #spLoading .msg{color:var(--txt); font-size:15px; font-weight:600;}
+  #spLoading .sub{color:var(--mut); font-size:12.5px;}
+  #spLoading .bar{width:260px; height:5px; background:var(--panel2); border-radius:3px; overflow:hidden;}
+  #spLoading .bar .f{height:100%; width:0; background:var(--green); border-radius:3px;
+    transition:width 700ms cubic-bezier(.23,1,.32,1);}
+
+  /* ---------- Explorador del maestro ---------- */
+  #mTreeFull .box{max-width:1400px; width:96vw; height:94vh;}
+  .tf-head{padding:16px 22px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+  .tf-head input[type=search]{width:280px; margin-left:auto;}
+  .tf-crumb{display:flex; align-items:center; gap:8px; font-size:13px; flex-wrap:wrap; min-height:26px;}
+  .tf-crumb .cb{background:none; border:none; color:var(--mut); padding:4px 8px; border-radius:6px; font-size:13px;}
+  .tf-crumb .cb:hover{color:var(--txt); background:var(--panel2);}
+  .tf-crumb .cb.act{color:var(--green); font-weight:700; cursor:default;}
+  .tf-crumb .sep{color:#4a5765; font-size:11px;}
+
+  /* anatomía del código */
+  .tf-anat{padding:14px 22px; border-bottom:1px solid var(--line); background:var(--anat);
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .tf-anat .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.7px; color:var(--mut); margin-right:4px;}
+  .anat-seg{border:1px solid var(--line); border-radius:9px; padding:6px 13px; background:var(--panel2); min-width:96px;}
+  .anat-seg .k{font-size:9.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--mut); display:block; margin-bottom:1px;}
+  .anat-seg .v{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:17px; font-weight:700; letter-spacing:1px;}
+  .anat-seg.f .v{color:#5fc0f2;} .anat-seg.c .v{color:var(--green);} .anat-seg.m .v{color:var(--amber);}
+  .anat-seg.ghost{opacity:.42;}
+  .anat-op{color:#4a5765; font-size:15px; font-weight:700;}
+  .anat-res{margin-left:auto; font-size:12px; color:var(--mut);}
+  .anat-res b{color:var(--txt); font-family:ui-monospace,Menlo,Consolas,monospace; font-size:15px; letter-spacing:1px;}
+
+  .tf-body{padding:20px 22px 26px; overflow-y:auto; flex:1;}
+  .tf-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(268px,1fr)); gap:14px;}
+  .tile{border:1px solid var(--line); border-radius:14px; background:var(--panel2); padding:17px 18px;
+    cursor:pointer; display:flex; flex-direction:column; gap:9px; transition:transform .14s, border-color .14s, box-shadow .14s;}
+  .tile:hover{transform:translateY(-2px); border-color:var(--green-dim); box-shadow:0 8px 22px rgba(0,0,0,.32);}
+  .tile .t-top{display:flex; align-items:center; gap:10px;}
+  .tile .t-cod{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:25px; font-weight:700; line-height:1; letter-spacing:.5px;}
+  .tile.fam .t-cod{color:#5fc0f2;} .tile.cat .t-cod{color:var(--green);}
+  .tile .t-chev{margin-left:auto; color:#4a5765; font-size:15px;}
+  .tile:hover .t-chev{color:var(--green);}
+  .tile .t-name{font-size:14px; font-weight:600; line-height:1.3;}
+  .tile .t-meta{font-size:11.5px; color:var(--mut); display:flex; gap:12px; flex-wrap:wrap;}
+  .tile .t-pat{font-family:ui-monospace,Menlo,Consolas,monospace; color:#6d7b8b; font-size:11px;}
+
+  /* listado de materiales */
+  .mat-list{display:flex; flex-direction:column; gap:1px; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  .mat-row{display:flex; align-items:center; gap:16px; padding:11px 16px; background:var(--panel2); font-size:13.5px;}
+  .mat-row:nth-child(even){background:var(--zebra);}
+  .mat-row .m-cod{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:14.5px; letter-spacing:.5px; flex:none; min-width:96px;}
+  .mat-row .m-cod .pfx{color:#6d7b8b;} .mat-row .m-cod .sfx{color:var(--amber); font-weight:700;}
+  .mat-row .m-desc{flex:1;}
+  .mat-row .m-uni{color:var(--mut); font-size:12px; flex:none;}
+  .mat-hd{display:flex; gap:16px; padding:0 16px 8px; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.7px; color:var(--mut);}
+  .mat-hd .a{min-width:96px;} .mat-hd .b{flex:1;}
+
+  .tf-sec{font-size:11px; text-transform:uppercase; letter-spacing:.9px; color:var(--mut); margin:0 0 12px;}
+  .tf-back{background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:7px 13px;
+    border-radius:8px; font-size:12.5px; margin-bottom:16px;}
+  .tf-back:hover{border-color:var(--green-dim);}
+  .res-path{font-size:11px; color:var(--mut); margin-bottom:3px;}
+  mark{background:rgba(240,180,41,.28); color:var(--amber); border-radius:3px; padding:0 2px;}
+
+  @media (max-width:720px){
+    #mTreeFull .box{width:100vw; height:100vh; max-width:none; border-radius:0;}
+    .tf-head{padding:12px 14px;} .tf-head input[type=search]{width:100%; margin-left:0;}
+    .tf-anat{padding:12px 14px; gap:8px;} .anat-res{margin-left:0; width:100%;}
+    .tf-body{padding:14px;} .tf-grid{grid-template-columns:1fr;}
+    .mat-row{flex-wrap:wrap; gap:6px 14px;}
+  }
+
+  /* toast */
+  #toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:10px 18px; border-radius:10px; font-size:13px; opacity:0; pointer-events:none; transition:all .25s; z-index:99;}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  #toast.ok{border-color:var(--green-dim);}
+  #toast.err{border-color:var(--red);}
+
+  /* bitácora tabla */
+  /* Selector de ubicación (campo + ventana) */
+  #ubicCampo{width:100%; display:flex; align-items:center; gap:8px; background:var(--panel2);
+    border:1px solid var(--line); border-radius:8px; padding:10px 12px; color:var(--txt);
+    font-size:13px; text-align:left;}
+  #ubicCampo:hover{border-color:var(--green-dim);}
+  #ubicCampo .ph{color:var(--mut);}
+  #ubicCampo .ubic-ico{margin-left:auto; color:var(--mut); font-size:11px;}
+  #ubicCampo.ok{border-color:var(--green-dim); background:rgba(67,229,160,.08);}
+  #ubicCampo.ok .cod{font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--green); font-weight:700;}
+  #ubicSugM{display:flex; flex-direction:column; gap:6px; margin-top:10px;}
+  .sug-t{font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.4px;}
+  .sug-b{display:flex; align-items:center; gap:8px; text-align:left; background:var(--anat);
+    border:1px solid var(--line); border-radius:8px; padding:8px 11px; color:var(--txt); font-size:12.5px;}
+  .sug-b:hover{border-color:var(--green);}
+  .sug-b .cod{font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--green); font-weight:700;}
+  .sug-b small{color:var(--mut);}
+  .ubic-ns{background:transparent; color:var(--mut); font-size:12px; text-decoration:underline; padding:2px 0;}
+  .ubic-ns:hover{color:var(--txt);}
+  /* árbol dentro de la ventana */
+  .ua-f{padding:7px 6px; font-size:13px; font-weight:600; color:var(--txt); display:flex; align-items:center; gap:7px; cursor:pointer; border-radius:6px;}
+  .ua-f:hover{background:var(--hover);}
+  .ua-f .flecha{color:var(--mut); font-size:10px; width:12px; flex:none; transition:transform .15s;}
+  .ua-f.abierta .flecha{transform:rotate(90deg);}
+  .ua-f .cod{font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--mut); font-weight:600;}
+  .ua-f .n{margin-left:auto; color:var(--mut); font-size:11.5px; font-weight:400;}
+  .ua-c{padding:6px 6px 6px 34px; font-size:12.5px; color:var(--txt); display:flex; align-items:center; gap:8px; cursor:pointer; border-radius:6px;}
+  .ua-c:hover{background:var(--anat);}
+  .ua-c .cod{font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--green); font-weight:700;}
+  .ua-c mark{background:rgba(240,180,41,.3); color:inherit; border-radius:2px;}
+  .ua-vacio{padding:14px; color:var(--mut); font-size:12.5px; text-align:center;}
+  /* Pasos de la solicitud */
+  .pasos{display:flex; align-items:center; gap:6px; margin:2px 0 6px; font-size:11.5px; flex-wrap:wrap;}
+  .paso{display:flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px;
+    background:var(--panel2); color:var(--mut); border:1px solid var(--line);}
+  .paso.done{background:rgba(67,229,160,.13); color:var(--green); border-color:var(--green-dim);}
+  .paso.now{background:rgba(240,180,41,.13); color:var(--amber); border-color:rgba(240,180,41,.4); font-weight:700;}
+  .paso-fl{color:var(--mut);}
+  .sol-form{display:flex; gap:7px; flex-wrap:wrap; margin-top:9px; align-items:center;}
+  .sol-form input{background:var(--panel2); border:1px solid var(--line); border-radius:7px;
+    padding:7px 9px; color:var(--txt); font-size:12.5px; width:150px;}
+  .sol-form .sol-aux{width:170px;}
+  .sol-form .btn{padding:7px 12px; font-size:12.5px;}
+  .sol-obs{width:100%; background:var(--panel2); border:1px solid var(--line); border-radius:7px;
+    padding:7px 9px; color:var(--txt); font-size:12.5px; resize:vertical; font-family:inherit;}
+  .sol-btns{display:flex; gap:8px;}
+  .sol-hist{margin-top:7px; font-size:11.5px; color:var(--mut); line-height:1.55; border-left:2px solid var(--line);
+    padding-left:9px;}
+  .sol-asig{width:100%; font-size:12.5px; color:var(--mut); background:var(--anat); border-radius:7px; padding:7px 10px;}
+  .sol-no{background:rgba(239,91,107,.12); color:var(--red); border:1px solid rgba(239,91,107,.35);}
+  .sol-no:hover{background:rgba(239,91,107,.22);}
+  .sol-recien{background:rgba(67,229,160,.10); border-left:3px solid var(--green); animation:solpop .5s ease;}
+  .sol-recien .bit-code{font-size:14px; padding:3px 10px;}
+  @keyframes solpop{from{background:rgba(67,229,160,.35);} to{background:rgba(67,229,160,.10);}}
+
+  /* Pantalla de acceso */
+  #loginGate{position:fixed; inset:0; z-index:95; display:flex; align-items:center; justify-content:center;
+    padding:24px; background:radial-gradient(1200px 600px at 50% -10%, #0d3b5c 0%, #0a1017 60%);}
+  #loginGate[hidden]{display:none !important;}
+  .gate-card{width:100%; max-width:420px; background:var(--panel); border:1px solid var(--line);
+    border-radius:16px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.5);}
+  .gate-top{background:linear-gradient(135deg,var(--blue2),var(--blue)); padding:20px 24px;
+    display:flex; align-items:center; gap:14px;}
+  .gate-logo{width:44px; height:44px; border-radius:11px; background:rgba(255,255,255,.16);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;
+    letter-spacing:.5px; color:#fff; flex:none;}
+  .gate-t{font-size:16.5px; font-weight:700; line-height:1.2;}
+  .gate-s{font-size:11.5px; color:#bcd9ea; margin-top:2px;}
+  .gate-body{padding:26px 24px 22px;}
+  .gate-h{font-size:15px; font-weight:600; margin-bottom:7px;}
+  .gate-msg{color:var(--mut); font-size:13px; line-height:1.55; margin-bottom:20px;}
+  .ms-login{width:100%; background:#fff; color:#1b1b1b; font-size:14px; font-weight:600;
+    padding:12px 16px; border-radius:9px; display:flex; align-items:center; justify-content:center; gap:11px;
+    transition:filter .15s;}
+  .ms-login:hover{filter:brightness(.94);}
+  .ms-login:disabled{opacity:.6; cursor:default;}
+  .gate-err{color:var(--red); font-size:12.5px; margin-top:12px; line-height:1.5;}
+  .gate-foot{margin-top:18px; padding-top:14px; border-top:1px solid var(--line);
+    color:#6d7b8b; font-size:11.5px; line-height:1.5;}
+
+  /* Selector segmentado del formulario */
+  .seg{display:flex; gap:4px; background:var(--panel2); padding:4px; border-radius:9px; border:1px solid var(--line);}
+  .seg-b{flex:1; background:transparent; color:var(--mut); font-size:12.5px; font-weight:600; padding:8px 6px; border-radius:6px;}
+  .seg-b:hover{color:var(--txt);}
+  .seg-b.act{background:var(--green); color:var(--green-txt);}
+  #similares{margin-top:8px;}
+  .sim-box{background:rgba(240,180,41,.08); border:1px solid rgba(240,180,41,.35); border-radius:8px;
+    padding:9px 11px; font-size:12px; color:var(--amber);}
+  .sim-box ul{margin:6px 0 0 16px; color:var(--txt); font-size:11.5px;}
+  .sim-box code{font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--green);}
+  #rightPanel textarea{resize:vertical; font-family:inherit;}
+
+  /* Selector de maestro */
+  .maestro-sel{display:flex; gap:4px; background:rgba(0,0,0,.24); padding:4px; border-radius:10px;
+    border:1px solid rgba(255,255,255,.14);}
+  .maestro-sel[hidden]{display:none !important;}
+  .ms-btn{background:transparent; color:#cfe3f0; font-size:12.5px; font-weight:600;
+    padding:7px 14px; border-radius:7px; display:flex; align-items:center; gap:7px; white-space:nowrap;}
+  .ms-btn:hover{background:rgba(255,255,255,.08);}
+  .ms-btn.act{background:var(--green); color:var(--green-txt);}
+  .ms-n{font-size:10.5px; opacity:.75; font-family:ui-monospace,Menlo,Consolas,monospace;}
+  @media (max-width:720px){ .maestro-sel{width:100%; } .ms-btn{flex:1; justify-content:center;} }
+
+  /* Bitácora: línea de tiempo */
+  #mBit .box{max-width:900px;}
+  #mBit .body{padding:0;}
+  #mBit h3{align-items:center;}
+  .bit-day{position:sticky; top:0; z-index:2; background:var(--panel); padding:11px 20px 8px;
+    font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--mut);
+    border-bottom:1px solid var(--line);}
+  .bit-item{display:flex; gap:14px; padding:13px 20px; border-bottom:1px solid var(--line2);}
+  .bit-item:hover{background:var(--hover);}
+  .bit-time{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:var(--mut);
+    flex:none; width:64px; padding-top:3px;}
+  .bit-body2{flex:1; min-width:0; display:flex; flex-direction:column; gap:5px;}
+  .bit-l1{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .bit-tag{font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:11px;
+    text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;}
+  .bit-tag.alta{background:rgba(67,229,160,.15); color:var(--green);}
+  .bit-tag.camb{background:rgba(240,180,41,.15); color:var(--amber);}
+  .bit-tag.baja{background:rgba(239,91,107,.15); color:var(--red);}
+  .bit-tag.soli{background:rgba(1,151,231,.18); color:#5fc0f2;}
+  .bit-tag.sist{background:var(--panel2); color:var(--mut);}
+  .bit-code{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:14px; font-weight:700;}
+  .bit-desc{font-size:13.5px; line-height:1.4;}
+  .bit-desc .old{color:var(--mut); text-decoration:line-through;}
+  .bit-desc .arw{color:#4a5765; margin:0 6px;}
+  .bit-meta{font-size:11.5px; color:var(--mut); display:flex; gap:8px; flex-wrap:wrap; align-items:baseline;}
+  .bit-meta .dot{color:#3c4653;}
+  .bit-obs{font-size:11.5px; color:#7f8fa0; font-style:italic;}
+  @media (max-width:720px){
+    .bit-item{flex-direction:column; gap:7px; padding:12px 14px;}
+    .bit-time{width:auto;} .bit-day{padding:10px 14px 7px;}
+  }
+  .accion-tag{font-size:11px; font-weight:700;}
+
+  /* inconsistencias */
+  .inc-item{border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:8px; font-size:12.5px;}
+  .inc-item b{color:var(--amber);}
+  .inc-item code{font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--green); background:var(--panel2); padding:1px 5px; border-radius:4px;}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:1100px){
+    main{grid-template-columns:250px 1fr;}
+    #rightPanel{grid-column:1 / -1; position:static; max-height:none;}
+  }
+  @media (max-width:720px){
+    main{grid-template-columns:1fr; padding:10px;}
+    header{padding:12px 14px;}
+    .hdr-actions{margin-left:0; width:100%;}
+    #treePanel{position:static; max-height:320px;}
+    #rightPanel{position:static;}
+    /* tabla apilada */
+    .tbl-wrap table, .tbl-wrap thead, .tbl-wrap tbody, .tbl-wrap th, .tbl-wrap td, .tbl-wrap tr{display:block;}
+    .tbl-wrap thead{display:none;}
+    .tbl-wrap tr{border:1px solid var(--line); border-radius:10px; margin:10px; padding:8px 10px; background:var(--panel2);}
+    .tbl-wrap td{border:none; padding:4px 0; display:flex; gap:10px;}
+    .tbl-wrap td::before{content:attr(data-label); color:var(--mut); font-size:11px; text-transform:uppercase; min-width:92px; flex:none; padding-top:2px;}
+  }
+</style>
+
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:_dlc_DocId msdt:dt="string">KHXYNEXCAXWW-711913839-257</mso:_dlc_DocId>
+<mso:_dlc_DocIdItemGuid msdt:dt="string">3b9d20ed-1ab2-40b9-9966-655c4ea61d8d</mso:_dlc_DocIdItemGuid>
+<mso:_dlc_DocIdUrl msdt:dt="string">https://ffvdes.sharepoint.com/sites/HoldingStorage/FFV/_layouts/15/DocIdRedir.aspx?ID=KHXYNEXCAXWW-711913839-257, KHXYNEXCAXWW-711913839-257</mso:_dlc_DocIdUrl>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Maestro de Materiales · iConstruye</h1>
+    <small>FFV Desarrollo Inmobiliario — Administración de códigos · v51</small>
+  </div>
+  <button id="btnTheme" title="Cambiar tonalidad" style="background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.16);
+    width:38px; height:38px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center;">
+    <svg id="icoLuna" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#f5d76e" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" fill="#f5d76e" stroke="none"/></svg>
+    <svg id="icoSol" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffd23f" stroke-width="2.2"
+      stroke-linecap="round" style="display:none"><circle cx="12" cy="12" r="4.4" fill="#ffd23f" stroke="none"/>
+      <path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg>
+  </button>
+  <div class="maestro-sel" id="maestroSel" hidden>
+    <button class="ms-btn act" data-m="PROY">Proyectos <span class="ms-n" id="msnPROY"></span></button>
+    <button class="ms-btn" data-m="CDC">Club de Campo <span class="ms-n" id="msnCDC"></span></button>
+    <button class="ms-btn" data-m="FFV">Oficina Central <span class="ms-n" id="msnFFV"></span></button>
+  </div>
+  <div class="file-chip" id="fileChip"><div class="dot"></div><span id="fileName">Sin archivo cargado</span></div>
+  <div class="hdr-actions">
+    <button class="btn btn-green" id="btnReload" style="display:none">⟳ Recargar desde SharePoint</button>
+    <button class="btn btn-green" id="btnImport" hidden>Importar Excel</button>
+    <button class="btn btn-ghost" id="btnSolic" style="position:relative; display:none">🔔 Solicitudes
+      <span id="solBadge" style="position:absolute; top:-7px; right:-7px; background:#ff3b30; color:#fff;
+        font-size:11px; font-weight:800; min-width:20px; height:20px; border-radius:10px; padding:0 5px;
+        display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.4);">0</span>
+    </button>
+    <button class="btn btn-ghost" id="btnTreeFull" disabled>⛶ Vista ampliada del árbol</button>
+    <button class="btn btn-ghost" id="btnRules" disabled>Reglas detectadas</button>
+    <button class="btn btn-ghost" id="btnBitacora" disabled>Bitácora <span id="bitCount" class="badge" style="display:none"></span></button>
+    <button class="btn btn-dark" id="btnExportXlsx" disabled>Descargar Excel</button>
+    <button class="btn btn-dark" id="btnExportBit" disabled>Exportar bitácora</button>
+  </div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" hidden>
+</header>
+
+<div id="loadbar"><div class="fill"></div></div>
+
+<main>
+  <!-- ÁRBOL -->
+  <section class="card" id="treePanel">
+    <h2>Árbol jerárquico <span class="badge" id="treeCount">—</span></h2>
+    <div id="tree"><div class="empty">Importa el archivo <b>MM_FFV_rev2.xlsx</b> para comenzar.</div></div>
+  </section>
+
+  <!-- TABLA -->
+  <section class="card" id="midPanel">
+    <h2>Materiales registrados <span class="badge" id="tblCount">0</span></h2>
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Buscar por código o descripción…">
+      <select id="fFam"><option value="">Familia: todas</option></select>
+      <select id="fCat"><option value="">Categoría: todas</option></select>
+      <select id="fEst">
+        <option value="">Estado: todos</option>
+        <option>Vigente</option><option>Nuevo</option><option>Modificado</option><option>Anulado</option>
+      </select>
+      <select id="fOri">
+        <option value="">Origen: todos</option>
+        <option value="original">Archivo original</option>
+        <option value="app">Creado en la app</option>
+        <option value="nuevos">Aprobado por contabilidad</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Código</th><th>Descripción</th><th>Unidad</th><th>Cuenta contable</th><th>Auxiliar</th><th>Estado</th><th id="thAcciones"></th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="7" class="empty">Sin datos.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CREACIÓN -->
+  <section class="card" id="rightPanel">
+    <h2>Solicitar nuevo material</h2>
+    <div class="form">
+      <div class="fld">
+        <label>¿Para dónde es?</label>
+        <div class="seg" id="destinoSeg">
+          <button type="button" class="seg-b act" data-d="PROY">Un proyecto</button>
+          <button type="button" class="seg-b" data-d="CDC">Club de Campo</button>
+          <button type="button" class="seg-b" data-d="FFV">Oficina Central</button>
+        </div>
+      </div>
+
+      <div class="fld" id="fldProyecto">
+        <label id="lblProyecto">¿Qué proyecto?</label>
+        <select id="reqProyectoSel"></select>
+        <input type="text" id="reqProyecto" placeholder="Escribe el nombre del proyecto" style="display:none; margin-top:6px">
+        <div class="hint err" id="errProyecto" style="display:none"></div>
+      </div>
+
+      <div class="fld" id="fldEtapa">
+        <label>¿En qué etapa se usará?</label>
+        <select id="reqEtapa">
+          <option value="">Selecciona la etapa…</option>
+          <option>Anteproyecto</option>
+          <option>Desarrollo</option>
+          <option>Construcción</option>
+          <option>Postventa</option>
+        </select>
+        <div class="hint">La etapa define la cuenta contable que asignará contabilidad.</div>
+        <div class="hint err" id="errEtapa" style="display:none"></div>
+      </div>
+
+      <div class="fld">
+        <label>¿Qué material o insumo necesitas?</label>
+        <input type="text" id="newDesc" placeholder="Ej: Proyecto de paisajismo" maxlength="140">
+        <div class="hint err" id="descHint" style="display:none"></div>
+        <div id="similares"></div>
+      </div>
+
+      <div class="fld" id="fldUbic">
+        <label>¿Dónde debería ir en el maestro?</label>
+        <button type="button" id="ubicCampo">
+          <span id="ubicCampoTxt" class="ph">Elegir ubicación en el maestro…</span>
+          <span class="ubic-ico">▾</span>
+        </button>
+        <div class="hint err" id="errUbic" style="display:none"></div>
+      </div>
+
+      <div class="fld">
+        <label>¿Para qué se usará?</label>
+        <textarea id="reqUso" rows="3" placeholder="Explica brevemente en qué se ocupará. Mientras más claro, más rápido lo resuelven."></textarea>
+        <div class="hint err" id="errUso" style="display:none"></div>
+      </div>
+
+      <div class="fld">
+        <label>Unidad de medida</label>
+        <input type="text" id="newUnit" value="Unidad">
+      </div>
+
+      <div class="fld">
+        <label>Solicitante</label>
+        <input type="text" id="userName" placeholder="Tu nombre">
+        <div class="hint" id="hintUser"></div>
+        <div class="hint err" id="errUser" style="display:none"></div>
+      </div>
+
+      <div class="fld">
+        <label>Tu correo</label>
+        <input type="email" id="userMail" placeholder="nombre@ffvdes.cl">
+        <div class="hint">Aquí te avisaremos cuando el material esté creado.</div>
+        <div class="hint err" id="errMail" style="display:none"></div>
+      </div>
+
+      <button class="btn btn-green" id="btnPreview">Revisar y enviar solicitud</button>
+    </div>
+  </section>
+</main>
+
+<!-- MODAL VISTA PREVIA -->
+<div class="modal" id="mPreview" hidden>
+  <div class="box">
+    <h3>Vista previa del nuevo material</h3>
+    <div class="body">
+      <dl class="kv" id="pvKv"></dl>
+      <div class="simwarn" id="pvSim" style="display:none"></div>
+    </div>
+    <div class="foot">
+      <button class="btn btn-dark" id="pvCancel">Cancelar</button>
+      <button class="btn btn-green" id="pvConfirm">Confirmar creación</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDICIÓN -->
+<div class="modal" id="mEdit" hidden>
+  <div class="box">
+    <h3>Editar material <code id="edCode" style="color:var(--green)"></code></h3>
+    <div class="body">
+      <div class="fld" style="margin-bottom:12px">
+        <label>Descripción</label>
+        <input type="text" id="edDesc">
+      </div>
+      <div class="fld" style="margin-bottom:12px">
+        <label>Responsable</label>
+        <input type="text" id="edUser" placeholder="Tu nombre">
+      </div>
+      <div class="fld">
+        <label>Observaciones</label>
+        <input type="text" id="edObs" placeholder="Motivo del cambio">
+      </div>
+    </div>
+    <div class="foot">
+      <button class="btn btn-red" id="edAnular">Anular material</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-dark" id="edCancel">Cancelar</button>
+      <button class="btn btn-green" id="edSave">Guardar cambio</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BITÁCORA -->
+<div class="modal" id="mBit" hidden>
+  <div class="box wide">
+    <h3>Bitácora de cambios <span class="badge" id="bitTotal"></span>
+      <label class="chk" style="margin-left:auto; font-size:12px"><input type="checkbox" id="bitSys"> Mostrar cargas del sistema</label>
+    </h3>
+    <div class="body" id="bitBody"></div>
+    <div class="foot">
+      <button class="btn" id="bitLimpiar" style="margin-right:auto; background:rgba(239,91,107,.12); color:var(--red); border:1px solid rgba(239,91,107,.35)">🧹 Vaciar bitácora</button>
+      <button class="btn btn-dark" id="bitClose">Cerrar</button>
+      <button class="btn btn-green" id="bitExport">Exportar a Excel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REGLAS -->
+<div class="modal" id="mRules" hidden>
+  <div class="box wide">
+    <h3>Lógica de codificación detectada e inconsistencias</h3>
+    <div class="body" id="rulesBody"></div>
+    <div class="foot"><button class="btn btn-dark" id="rulesClose">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- VENTANA: ELEGIR UBICACIÓN EN EL MAESTRO -->
+<div class="modal" id="mUbic" hidden>
+  <div class="box" style="max-width:520px">
+    <h3>Elegir ubicación en el maestro
+      <button class="btn btn-ghost" id="ubicCerrarX" style="margin-left:auto; padding:4px 10px">✕</button>
+    </h3>
+    <div style="padding:12px 20px 0">
+      <input type="text" id="ubicFiltro" placeholder="Filtrar: paisajismo, mobiliario, hormigón…" autocomplete="off" style="width:100%">
+      <div id="ubicSugM"></div>
+    </div>
+    <div class="body" id="ubicArbol" style="padding:10px 20px; max-height:46vh"></div>
+    <div class="foot" style="justify-content:space-between">
+      <button type="button" class="ubic-ns" id="ubicNS">No estoy seguro — que lo defina contabilidad</button>
+      <button class="btn btn-dark" id="ubicCerrar">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SOLICITUDES PENDIENTES -->
+<div class="modal" id="mSol" hidden>
+  <div class="box" style="max-width:860px">
+    <h3>Solicitudes de materiales <span class="badge" id="solTotal"></span>
+      <label class="chk" style="margin-left:auto; font-size:12px"><input type="checkbox" id="solVerRes"> Mostrar resueltas</label>
+    </h3>
+    <div style="padding:10px 20px; background:var(--anat); border-bottom:1px solid var(--line); font-size:12px; color:var(--mut)">
+      <b>1. Contabilidad</b> asigna código y <b>cuenta + auxiliar</b> si es cuenta de <b>activo</b> (o <b>solo la cuenta</b> si es de <b>gasto</b>) y lo pasa a TI.
+      <b>2. TI</b> crea el recurso en iConstruye y lo marca como creado: el solicitante recibe el aviso por correo.
+    </div>
+    <div class="body" id="solBody" style="padding:0"></div>
+    <div class="foot"><button class="btn btn-dark" id="solClose">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- EXPLORADOR DEL MAESTRO -->
+<div class="modal" id="mTreeFull" hidden>
+  <div class="box">
+    <div class="tf-head">
+      <div class="tf-crumb" id="tfCrumb"></div>
+      <input type="search" id="tfQ" placeholder="Buscar material, categoría o familia…">
+      <button class="btn btn-dark" id="tfClose">Cerrar</button>
+    </div>
+    <div class="tf-anat" id="tfAnat"></div>
+    <div class="tf-body" id="tfBody"></div>
+  </div>
+</div>
+
+<div id="loginGate" hidden>
+  <div class="gate-card">
+    <div class="gate-top">
+      <div class="gate-logo">MM</div>
+      <div>
+        <div class="gate-t">Maestro de Materiales</div>
+        <div class="gate-s">FFV Desarrollo Inmobiliario · iConstruye</div>
+      </div>
+    </div>
+    <div class="gate-body">
+      <div class="gate-h" id="gateTitulo">Inicia sesión para continuar</div>
+      <div class="gate-msg" id="gateMsg">Necesitas tu cuenta corporativa FFV para acceder al maestro.</div>
+
+      <button class="ms-login" id="btnLogin">
+        <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true">
+          <rect x="1" y="1" width="10" height="10" fill="#f25022"/>
+          <rect x="12" y="1" width="10" height="10" fill="#7fba00"/>
+          <rect x="1" y="12" width="10" height="10" fill="#00a4ef"/>
+          <rect x="12" y="12" width="10" height="10" fill="#ffb900"/>
+        </svg>
+        <span id="btnLoginTxt">Iniciar sesión con Microsoft</span>
+      </button>
+
+      <button class="btn btn-dark" id="btnReintentar" style="width:100%; margin-top:10px; display:none;">Ya inicié sesión · Reintentar</button>
+      <div id="loginErr" class="gate-err"></div>
+      <div class="gate-foot" id="gateFoot">Se usará tu identidad de FFV para registrar cada solicitud.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mOk" hidden>
+  <div class="box" style="max-width:480px">
+    <div style="padding:28px 26px; text-align:center">
+      <div id="okIcon" style="font-size:42px; line-height:1; margin-bottom:14px">✅</div>
+      <div id="okTitulo" style="font-size:17px; font-weight:700; margin-bottom:8px">Solicitud enviada</div>
+      <div id="okTexto" style="color:var(--mut); font-size:13.5px; line-height:1.5"></div>
+      <div id="okResumen" style="margin-top:16px; background:var(--panel2); border:1px solid var(--line);
+        border-radius:10px; padding:12px 14px; text-align:left; font-size:12.5px; line-height:1.6"></div>
+    </div>
+    <div class="foot"><button class="btn btn-green" id="okCerrar">Entendido</button></div>
+  </div>
+</div>
+
+<div id="spLoading" hidden>
+  <div class="spinner"></div>
+  <div class="msg" id="spLoadingMsg">Conectando con SharePoint…</div>
+  <div class="sub" id="spLoadingSub">Leyendo el Maestro de Materiales</div>
+  <div class="bar"><div class="f" id="spLoadingFill"></div></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   MAESTRO DE MATERIALES FFV — iConstruye · v1.0
+   Lógica inferida del archivo MM_FFV_rev2.xlsx (no inventada):
+   - Hoja única: MM_FFV_REV1, columnas A–F:
+     A=Tipo fila (F=Familia, C=Categoría, Cod=Material)
+     B=Código, C=Descripción, D=Unidad, E=Cuenta contable, F=Auxiliar
+   - Código de material = Categoría * 1000 + correlativo (3 dígitos).
+     Familias 100–900: códigos de 6 dígitos. 1000+: 7 dígitos.
+   - Correlativo: consecutivo dentro de la categoría, partiendo en 001.
+   - Algunas categorías reservan BLOQUES de correlativos por subgrupo
+     (1001, 1003, 1004, 1005, 1105): se respetan al proponer códigos.
+   - Filas 'Cod' sin código = separadores de sección (se preservan).
+   ============================================================ */
+
+const $  = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const LS_KEY = 'mm_ffv_state_v1';
+
+/* ============================================================
+   CONFIGURACIÓN SHAREPOINT (Power Automate)
+   Pega aquí las URLs de los dos flujos HTTP. Si quedan vacías,
+   la app funciona en modo manual (importar / descargar Excel).
+   ============================================================ */
+const MM_FLOW_LEER  = 'https://default92ad293694f04822a980a862b52a8b.1b.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/27/workflows/a2f5766b96844bd38c998a8ae06baa26/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=n8Aq5AGOAYoZDegwYbdywrQitUJfN62MfxAOUpyESVk';   // Flujo "MM Leer Maestro"  (lee la tabla del Excel en SharePoint)
+const MM_FLOW_CREAR = 'https://default92ad293694f04822a980a862b52a8b.1b.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/28/workflows/e5ee5225eae74ff89f9146ad74e3681a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=wx10fdpGxCKG1IuSLIXPne2R3jK_aVvUsHQI3ZiKdgk';   // Flujo "MM Crear Material" (agrega fila al Excel + bitácora)
+const MM_FLOW_EDITAR = 'https://default92ad293694f04822a980a862b52a8b.1b.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/06/workflows/e23c651a4e2445b1b7769b74096a270c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=f5dAxpG4ZvKOa2AGklvKT7RssBQvyFBqyUhQfCPU4zM';  // Flujo "MM Actualizar Material" (actualiza la descripción en el Excel + bitácora)
+
+/* ============================================================
+   LOGIN MICROSOFT (Entra ID / MSAL) — opcional
+   Cuando TI registre la SPA en Entra ID, pega aquí los IDs
+   (los mismos de ffv_seguimiento.html). Con los IDs puestos:
+   - la app exige iniciar sesión con la cuenta FFV,
+   - el Responsable se llena solo con el nombre y correo del usuario
+     y no se puede editar → trazabilidad real en la bitácora.
+   Si quedan vacíos, la app funciona como ahora (nombre manual).
+   ============================================================ */
+/* ============================================================
+   PERMISOS POR USUARIO
+   TI los administra en una hoja "PERMISOS" del mismo Excel, con
+   columnas:  Correo | Rol | Maestros
+     Rol:      lectura | solicitante | admin
+     Maestros: Todos | Proyectos | Oficina Central
+   Si la hoja no existe, todos entran con ROL_POR_DEFECTO.
+   ============================================================ */
+/* Exigir identificación antes de usar la app:
+     'auto'  → la exige solo si hay forma real de autenticar
+               (alojada en SharePoint, o con IDs de Entra configurados).
+               Si no la hay, permite escribir nombre y correo a mano.
+     true    → la exige siempre (bloquea si no hay forma de autenticar)
+     false   → nunca la exige                                            */
+const EXIGIR_LOGIN = 'auto';
+
+function hayFormaDeAutenticar(){
+  return /\.sharepoint\.com$/i.test(location.hostname) || !!(FFV_CLIENT_ID && FFV_TENANT_ID);
+}
+function loginObligatorio(){
+  if(EXIGIR_LOGIN === 'auto') return hayFormaDeAutenticar();
+  return !!EXIGIR_LOGIN;
+}
+
+const ROL_POR_DEFECTO = 'solicitante';
+const DOMINIOS_PERMITIDOS = ['ffvdes.cl','ffv.cl'];   // se valida el correo del login
+
+const FFV_CLIENT_ID = '';   // Id. de aplicación (cliente) de la SPA en Entra ID
+const FFV_TENANT_ID = '';   // Id. de directorio (inquilino) de FFV
+
+/* Botón "Editar" de la tabla: oculto por ahora — la edición de atributos
+   se abordará más adelante. PARA REACTIVARLO: cambiar a true. */
+const MOSTRAR_EDITAR = false;
+
+/* ============================================================
+   MODO SOLICITUD (Teams)
+   true  = la app NO escribe en el maestro; envía la propuesta de
+           material como mensaje de Teams al grupo de TI, que edita
+           la tabla directamente.
+   false = vuelve a la creación directa en SharePoint.
+   ============================================================ */
+const MODO_SOLICITUD = true;
+/* fetch con límite de espera: si el flujo no contesta en 15 s, se avisa en vez de esperar eterno */
+function fetchLimite(url, opciones, ms = 15000){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, {...opciones, signal: ctrl.signal}).finally(() => clearTimeout(t));
+}
+
+const MM_FLOW_RESOLVER = 'https://default92ad293694f04822a980a862b52a8b.1b.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/23/workflows/421f6b9059ce4ff1a87f27be533efe74/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-gbZjXYdEZaey-jFWQ2xtjXW2XcmDXXgOUJn5KsAS6Y';   // Flujo "MM Resolver Solicitud" (actualiza Excel + avisa al solicitante)
+const MM_FLOW_SOLICITAR = 'https://default92ad293694f04822a980a862b52a8b.1b.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/06/workflows/6cdce9ee7dc1458fa3c115450eba4d5b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5rPGKdzY2sYSz-EMUxnnEM4gOjfeu3kbKKdFgbBBTj0';   // Flujo "MM Solicitar Material" (publica en Teams)
+
+const state = {
+  fileName:null, rows:[],           // filas en orden original {tipo,code,desc,unit,cta,aux,origen,estado,id}
+  tree:[],                          // familias -> categorias -> materiales/bloques
+  selCat:null, selFam:null,
+  bitacora:[], dupCodes:new Set(), inconsistencias:[],
+  nextId:1
+};
+
+/* ---------- utilidades ---------- */
+function toast(msg, cls='ok'){
+  const t = $('#toast'); t.textContent = msg; t.className = 'show '+cls;
+  clearTimeout(t._h); t._h = setTimeout(()=> t.className='', 2600);
+}
+function norm(s){
+  return (s??'').toString().toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+}
+function nowStr(){
+  return new Date().toLocaleString('es-CL',{dateStyle:'short', timeStyle:'medium'});
+}
+function catOfCode(code){ return Math.floor(code/1000); }
+function corrOfCode(code){ return code % 1000; }
+function fmtCode(cat, corr){ return cat*1000 + corr; }
+function similarity(a, b){
+  a = norm(a); b = norm(b);
+  if(!a || !b) return 0;
+  if(a === b) return 1;
+  if(a.includes(b) || b.includes(a)) return .9;
+  const ta = new Set(a.split(' ')), tb = new Set(b.split(' '));
+  let inter = 0; ta.forEach(w => { if(tb.has(w)) inter++; });
+  return inter / Math.max(ta.size, tb.size);
+}
+
+/* ---------- bitácora ---------- */
+function logBit({usuario, accion, codigo, descAnt, descNueva, rama, estado, obs}){
+  state.bitacora.unshift({
+    ts: nowStr(), usuario: usuario||'—', accion, codigo: codigo??'—',
+    descAnt: descAnt||'—', descNueva: descNueva||'—', rama: rama||'—',
+    estado, obs: obs||''
+  });
+  const n = state.bitacora.length;
+  $('#bitCount').style.display = 'inline-block';
+  $('#bitCount').textContent = n;
+  // respaldo local automático tras cada movimiento
+  if(state.fileName) saveLocal(true);
+}
+
+/* ---------- persistencia local ---------- */
+function saveLocal(silent=false){
+  const appRows = state.rows.filter(r => r.origen==='app' || r.estado==='Modificado' || r.estado==='Anulado')
+    .map(r => ({tipo:r.tipo, code:r.code, desc:r.desc, unit:r.unit, cta:r.cta, aux:r.aux,
+                origen:r.origen, estado:r.estado, descOriginal:r.descOriginal, afterCat:r.afterCat}));
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    fileName: state.fileName, savedAt: nowStr(), appRows, bitacora: state.bitacora
+  }));
+  if(!silent) toast('Cambios guardados localmente en este navegador.');
+}
+function restoreLocal(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const snap = JSON.parse(raw);
+    if(snap.fileName !== state.fileName) return;   // solo restaurar si es el mismo archivo
+    let restored = 0;
+    (snap.appRows||[]).forEach(sr => {
+      if(sr.origen === 'app'){
+        if(state.rows.some(r => r.tipo==='Cod' && r.code === sr.code)) return; // ya existe en el archivo
+        insertMaterialRow(sr, sr.afterCat);
+        restored++;
+      }else{
+        const tgt = state.rows.find(r => r.tipo==='Cod' && r.code === sr.code && r.origen==='original');
+        if(tgt){ tgt.desc = sr.desc; tgt.estado = sr.estado; tgt.descOriginal = sr.descOriginal; restored++; }
+      }
+    });
+    state.bitacora = snap.bitacora || [];
+    if(state.bitacora.length){
+      $('#bitCount').style.display='inline-block';
+      $('#bitCount').textContent = state.bitacora.length;
+    }
+    if(restored) toast(`Sesión anterior restaurada: ${restored} cambio(s) reaplicado(s).`);
+  }catch(e){ console.warn('No se pudo restaurar sesión:', e); }
+}
+
+/* ---------- parseo del Excel ---------- */
+$('#btnImport').onclick = () => $('#fileInput').click();
+$('#fileInput').onchange = e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const lb = $('#loadbar'); lb.style.display='block'; lb.querySelector('.fill').style.width='30%';
+  const fr = new FileReader();
+  fr.onload = ev => {
+    try{
+      lb.querySelector('.fill').style.width='70%';
+      const wb = XLSX.read(ev.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+      state.archivoNombre = f.name;
+      leerPermisos(wb);
+      leerSolicitudes(wb);
+      leerProyectos(wb);
+      leerNuevos(wb);
+      state.aoas = separarPorHojas(wb);
+      aplicarMaestros(false);
+      aplicarPermisos();
+      lb.querySelector('.fill').style.width='100%';
+      setTimeout(()=>{ lb.style.display='none'; lb.querySelector('.fill').style.width='0'; }, 800);
+    }catch(err){
+      lb.style.display='none';
+      toast('Error al leer el archivo: '+err.message, 'err');
+    }
+  };
+  fr.readAsArrayBuffer(f);
+  e.target.value = '';
+};
+
+/* ============================================================
+   DOS MAESTROS EN UN MISMO ARCHIVO
+   - Si existe una columna extra (G) que indique el maestro
+     ("PROYECTOS" / "OFICINA CENTRAL"), esa manda.
+   - Si no existe, se deduce del número de familia:
+     familia < 4000 → Proyectos · familia >= 4000 → Oficina Central.
+   Cada maestro tiene su propio árbol, correlativos y validación.
+   ============================================================ */
+const MAESTROS = {
+  PROY: {nombre:'Proyectos',       hoja:'Maestro de Proyectos'},
+  CDC:  {nombre:'Club de Campo',   hoja:'Maestro Club de Campo'},
+  FFV:  {nombre:'Oficina Central', hoja:'Maestro Oficina Central'}
+};
+
+/* Los dos catálogos son PARALELOS: mismos artículos, distinta cuenta
+   contable según dónde se imputa la compra. Por eso la separación es
+   POR HOJA/TABLA del Excel, no por número de familia:
+     hoja con "PROY" en el nombre → compras imputadas a proyectos
+     hoja con "FFV"  en el nombre → compras de/para Oficina Central   */
+function maestroDeHoja(nombre){
+  const n = norm(nombre);
+  if(n.includes('bitacora') || n.includes('revision') || n.includes('solicitud') || n.includes('permiso') || n.includes('proyectos')) return null;
+  if(n.includes('club') || n.includes('cdc')) return 'CDC';
+  if(n.includes('proy')) return 'PROY';
+  if(n.includes('ffv') || n.includes('oficina') || n.includes('central')) return 'FFV';
+  return null;
+}
+
+function leerPermisos(wb){
+  const hoja = wb.SheetNames.find(n => norm(n).includes('permiso'));
+  state.permisos = null;
+  if(!hoja) return;
+  const aoa = XLSX.utils.sheet_to_json(wb.Sheets[hoja], {header:1, defval:null});
+  if(!aoa.length) return;
+  const enc = (aoa[0]||[]).map(x => norm(x));
+  const iC = enc.findIndex(h => h && (h.includes('correo') || h.includes('mail') || h.includes('usuario')));
+  const iR = enc.findIndex(h => h && h.includes('rol'));
+  const iM = enc.findIndex(h => h && h.includes('maestro'));
+  if(iC < 0) return;
+  const map = {};
+  for(let i=1; i<aoa.length; i++){
+    const f = aoa[i] || [];
+    const correo = norm(f[iC]);
+    if(!correo || !correo.includes('@')) continue;
+    map[correo] = {
+      rol: (iR >= 0 ? norm(f[iR]) : '') || ROL_POR_DEFECTO,
+      maestros: iM >= 0 ? norm(f[iM]) : 'todos'
+    };
+  }
+  state.permisos = map;
+}
+
+function rolDe(correo){
+  const c = norm(correo);
+  if(!state.permisos) return {rol: ROL_POR_DEFECTO, maestros:'todos'};
+  return state.permisos[c] || {rol: ROL_POR_DEFECTO, maestros:'todos'};
+}
+
+/* Aplica el rol a la interfaz: quién puede solicitar y qué catálogos ve. */
+function aplicarPermisos(){
+  const correo = state.correoUsuario || '';
+  const p = rolDe(correo);
+  state.rol = p.rol;
+
+  // Solo lectura: se oculta el panel de solicitud
+  const soloLectura = p.rol === 'lectura';
+  $('#rightPanel').style.display = soloLectura ? 'none' : '';
+  if(soloLectura) $('main').style.gridTemplateColumns = '290px 1fr';
+
+  // Catálogos permitidos
+  const m = p.maestros || 'todos';
+  const permite = id => m.includes('todos') || (id==='PROY' ? m.includes('proyecto') : id==='CDC' ? m.includes('club') : (m.includes('oficina')||m.includes('central')));
+  let visibles = 0;
+  $$('#maestroSel .ms-btn').forEach(b => {
+    const ok = permite(b.dataset.m) && state.aoas && state.aoas[b.dataset.m];
+    b.style.display = ok ? '' : 'none';
+    if(ok) visibles++;
+  });
+  $('#maestroSel').hidden = visibles < 2;
+  // si el maestro activo no está permitido, cambiar al primero permitido
+  if(state.maestro && !permite(state.maestro)){
+    const alt = ['PROY','CDC','FFV'].find(id => permite(id) && state.aoas && state.aoas[id]);
+    if(alt){ cargarMaestro(alt, true); actualizarChip(); }
+  }
+  if(p.rol !== ROL_POR_DEFECTO || soloLectura){
+    $('#fileChip').title = 'Rol: ' + p.rol;
+  }
+}
+
+/* ---- Hoja NUEVOS: materiales aprobados que el flujo deposita; la app los fusiona en su categoría ---- */
+function leerNuevos(wb){
+  state.nuevos = [];
+  const hoja = wb.SheetNames.find(n => norm(n).includes('nuevos'));
+  if(!hoja) return;
+  const aoa = XLSX.utils.sheet_to_json(wb.Sheets[hoja], {header:1, defval:null});
+  if(aoa.length < 2) return;
+  const enc = (aoa[0]||[]).map(x => norm(x));
+  const col = q => enc.findIndex(h => h && h.includes(q));
+  const i = {maestro:col('maestro'), cod:col('codigo'), desc:col('descripcion'), uni:col('unidad'),
+             cta:col('cuenta'), aux:col('auxiliar'), est:col('estado')};
+  const porCodigo = new Map();                       // se queda con la ÚLTIMA fila de cada código
+  for(let r=1; r<aoa.length; r++){
+    const f = aoa[r] || []; const g = k => i[k] >= 0 ? (f[i[k]] ?? '') : '';
+    const code = parseInt(g('cod'), 10); if(isNaN(code)) continue;
+    const m = norm(g('maestro'));
+    porCodigo.set(code, {code, maestro: m.includes('ffv')||m.includes('oficina') ? 'FFV' : (m.includes('cdc')||m.includes('club') ? 'CDC' : 'PROY'),
+      desc:String(g('desc')), uni:String(g('uni')||'Unidad'), cta:String(g('cta')), aux:String(g('aux')), estado:norm(g('est'))});
+  }
+  state.nuevos = [...porCodigo.values()].filter(x => !x.estado.includes('rechaz'));
+}
+
+function fusionarNuevos(){
+  if(!state.nuevos || !state.aoas) return;
+  Object.keys(state.aoas).forEach(id => {
+    const aoa = state.aoas[id];
+    // quitar fusiones previas (para no duplicar al recargar)
+    for(let k=aoa.length-1; k>=1; k--) if(String((aoa[k]||[])[6]||'').startsWith('NUEVO')) aoa.splice(k,1);
+    const existentes = new Set(aoa.filter(f => String((f||[])[0]||'').trim()==='Cod').map(f => parseInt(f[1],10)));
+    state.nuevos.filter(n => n.maestro === id && !existentes.has(n.code)).forEach(n => {
+      const cat = Math.floor(n.code / 1000);
+      const fila = ['Cod', n.code, n.desc, n.uni, n.cta, n.aux, 'NUEVO|' + (n.estado.includes('vigente') ? 'Vigente' : 'Pend. iConstruye')];
+      let idx = aoa.findIndex(f => String((f||[])[0]||'').trim()==='C' && parseInt(f[1],10) === cat);
+      if(idx >= 0){
+        idx++;
+        while(idx < aoa.length && String((aoa[idx]||[])[0]||'').trim()==='Cod') idx++;
+        aoa.splice(idx, 0, fila);
+      } else aoa.push(fila);
+    });
+  });
+}
+
+function leerSolicitudes(wb){
+  state.solicitudes = null;
+  const hoja = wb.SheetNames.find(n => norm(n).includes('solicitud'));
+  if(!hoja) return;
+  const aoa = XLSX.utils.sheet_to_json(wb.Sheets[hoja], {header:1, defval:null});
+  if(aoa.length < 2){ state.solicitudes = []; return; }
+  const enc = (aoa[0]||[]).map(x => norm(x));
+  const col = q => enc.findIndex(h => h && h.includes(q));
+  const i = {fecha:col('fecha'), sol:col('solicitante'), correo:col('correo'), dest:col('destino'),
+             proy:col('proyecto'), etapa:col('etapa'), desc:col('descripcion'), uso:col('uso'),
+             uni:col('unidad'), est:col('estado'), cod:col('codigo'), obs:col('observacion'),
+             fam:col('familia'), cat:col('categoria'), cta:col('cuenta'), aux:col('auxiliar'), hist:col('historial')};
+  const out = [];
+  for(let r=1; r<aoa.length; r++){
+    const f = aoa[r] || [];
+    const g = k => i[k] >= 0 ? (f[i[k]] ?? '') : '';
+    if(!String(g('desc')).trim() && !String(g('sol')).trim()) continue;
+    out.push({fecha:String(g('fecha')), sol:String(g('sol')), correo:String(g('correo')),
+              dest:String(g('dest')), proy:String(g('proy')), etapa:String(g('etapa')),
+              desc:String(g('desc')), uso:String(g('uso')), uni:String(g('uni')),
+              estado:norm(g('est')), cod:String(g('cod')), obs:String(g('obs')),
+              fam:String(g('fam')), cat:String(g('cat')), cta:String(g('cta')), aux:String(g('aux')),
+              hist:String(g('hist'))});
+  }
+  state.solicitudes = out;
+}
+
+function actualizarSolicitudes(){
+  const btn = $('#btnSolic');
+  if(!state.solicitudes){ btn.style.display = 'none'; return; }
+  const pend = state.solicitudes.filter(x => abierta(x));
+  btn.style.display = '';
+  const b = $('#solBadge');
+  b.textContent = pend.length;
+  b.style.display = pend.length ? 'flex' : 'none';
+  if(pend.length) btn.classList.replace('btn-ghost','btn-green');
+  else btn.classList.replace('btn-green','btn-ghost');
+}
+
+/* Propone código y cuenta según la categoría cuyo contenido más se parece
+   a lo pedido, dentro del maestro que corresponde al destino. */
+function proponerAsignacion(x){
+  const d = norm(x.dest);
+  const id = d.includes('oficina') ? 'FFV' : (d.includes('club') && state.aoas?.CDC ? 'CDC' : 'PROY');
+  const aoa = state.aoas?.[id]; if(!aoa) return null;
+  const catElegida = (String(x.cat||'').match(/^(\d{3,4})\b/) || [])[1] || null;
+  let cat=null, mejor={sc:0};
+  const cats={};   // cat → {nombre, cods:[], ctas:{}, auxs:{}}
+  aoa.forEach(f => {
+    const t = String((f||[])[0]||'').trim();
+    if(t==='C' && f[1]!=null) cat = cats[f[1]] = {nombre:`${f[1]} ${f[2]||''}`.trim(), cods:[], ctas:{}, auxs:{}};
+    else if(t==='Cod' && f[1]!=null && cat){
+      const c = parseInt(f[1]); if(!isNaN(c)) cat.cods.push(c);
+      if(f[4]) cat.ctas[f[4]] = (cat.ctas[f[4]]||0)+1;
+      if(f[5] != null && f[5] !== '') cat.auxs[f[5]] = (cat.auxs[f[5]]||0)+1;
+      const sc = similarity(String(f[2]||''), x.desc);
+      if(sc > mejor.sc) mejor = {sc, cat};
+    }
+  });
+  if(catElegida && cats[catElegida] && cats[catElegida].cods.length) mejor = {sc:1, cat:cats[catElegida], elegida:true};
+  if(mejor.sc < 0.45 || !mejor.cat || !mejor.cat.cods.length) return null;
+  const c = mejor.cat;
+  const masComun = obj => Object.keys(obj).sort((a,b)=>obj[b]-obj[a])[0] || '';
+  return {codigo: String(Math.max(...c.cods) + 1), cuenta: masComun(c.ctas),
+          aux: masComun(c.auxs), cat: c.nombre, confianza: mejor.sc, elegida: !!mejor.elegida};
+}
+
+/* Estados: pendiente (contabilidad) → pendiente ti → resuelta | rechazada */
+function etapaDe(x){
+  const e = x.estado || '';
+  if(!e || e === 'pendiente') return 'contab';
+  if(e.includes('ti')) return 'ti';
+  if(e.includes('rechaz')) return 'rechazada';
+  return 'resuelta';
+}
+function abierta(x){ const e = etapaDe(x); return e === 'contab' || e === 'ti'; }
+function puedeContab(){ if(!state.permisos) return true; const r = state.rol||''; return r==='admin' || r.includes('contab'); }
+function puedeTI(){     if(!state.permisos) return true; const r = state.rol||''; return r==='admin' || r === 'ti' || r.includes('tecnolog'); }
+function puedeResolver(){ return puedeContab() || puedeTI(); }
+
+function renderSolicitudes(){
+  const verRes = $('#solVerRes').checked;
+  const items = (state.solicitudes||[]).map((x,idx) => ({...x, idx}))
+    .filter(x => verRes || abierta(x) || x.recien);
+  $('#solTotal').textContent = items.length + (items.length===1?' solicitud':' solicitudes');
+  $('#solBody').innerHTML = items.length ? items.map(x => {
+    const et = etapaDe(x);
+    const tag = {contab:['soli','Pendiente contabilidad'], ti:['camb','Pendiente TI'], resuelta:['alta','Creado en iConstruye'], rechazada:['baja','Rechazada']}[et];
+    const pasos = et === 'rechazada' ? '' : `<div class="pasos">
+      <span class="paso ${et==='contab'?'now':'done'}">${et==='contab'?'1 · Contabilidad':'✓ Contabilidad listo'}</span><span class="paso-fl">→</span>
+      <span class="paso ${et==='ti'?'now':(et==='resuelta'?'done':'')}">${et==='ti'?'2 · Falta TI (iConstruye)':(et==='resuelta'?'✓ TI creó en iConstruye':'2 · TI')}</span><span class="paso-fl">→</span>
+      <span class="paso ${et==='resuelta'?'done':''}">${et==='resuelta'?'✓ Usuario avisado':'3 · Avisar al usuario'}</span>
+    </div>`;
+    const ubic = [x.fam, x.cat].filter(Boolean).join(' › ');
+    let form = '';
+    if(et === 'contab' && puedeContab()){
+      const pr = proponerAsignacion(x);
+      form = `<div class="sol-form">
+        <input type="text" class="sol-cod" placeholder="Código asignado *" maxlength="12" value="${pr ? esc(pr.codigo) : ''}">
+        <input type="text" class="sol-cta" placeholder="Cuenta contable *" maxlength="20" value="${pr ? esc(pr.cuenta) : ''}">
+        <input type="text" class="sol-aux" placeholder="Auxiliar (solo si es activo)" maxlength="12" value="${pr ? esc(pr.aux) : ''}">
+        ${pr ? `<div class="hint" style="width:100%">Propuesta ${pr.elegida ? 'según la categoría que indicó el solicitante' : 'del sistema por similitud'}: <b>${esc(pr.cat)}</b> — corrígela si no corresponde.</div>` : ''}
+        <textarea class="sol-obs" rows="2" placeholder="Observación (obligatoria si rechazas)"></textarea>
+        <div class="sol-btns">
+          <button class="btn btn-green sol-ok">✓ Asignar y pasar a TI</button>
+          <button class="btn sol-no">✗ Rechazar</button>
+        </div>
+        <div class="hint err sol-err" style="display:none; width:100%"></div>
+      </div>`;
+    } else if(et === 'ti' && puedeTI()){
+      form = `<div class="sol-form">
+        <div class="sol-asig">Contabilidad asignó: <b>${esc(x.cod)}</b> · cuenta <b>${esc(x.cta)}</b>${x.aux ? ' · auxiliar <b>' + esc(x.aux) + '</b>' : ''}</div>
+        <textarea class="sol-obs" rows="2" placeholder="Observación (opcional; obligatoria si rechazas)"></textarea>
+        <div class="sol-btns">
+          <button class="btn btn-green sol-ok">✓ Creado en iConstruye · avisar al usuario</button>
+          <button class="btn sol-no">✗ Rechazar</button>
+        </div>
+        <div class="hint err sol-err" style="display:none; width:100%"></div>
+      </div>`;
+    } else if(et === 'ti'){
+      form = `<div class="sol-asig">Contabilidad asignó: <b>${esc(x.cod)}</b> · cuenta <b>${esc(x.cta)}</b>${x.aux ? ' · auxiliar <b>' + esc(x.aux) + '</b>' : ''}. Esperando a TI.</div>`;
+    }
+    return `<div class="bit-item ${x.recien ? 'sol-recien' : ''}" data-idx="${x.idx}">
+      <div class="bit-time">${esc(String(x.fecha).split(',')[0])}</div>
+      <div class="bit-body2">
+        <div class="bit-l1">
+          <span class="bit-tag ${tag[0]}">${tag[1]}</span>
+          <span style="font-weight:700">${esc(x.desc)}</span>
+          ${x.cod && et !== 'contab' && et !== 'rechazada' ? `<span class="bit-code">${esc(x.cod)}</span>` : ''}
+        </div>
+        <div class="bit-meta">
+          <span>${esc(x.dest)}${x.proy && x.proy !== 'Oficina Central' ? ' · ' + esc(x.proy) : ''}${x.etapa && !/no aplica/i.test(x.etapa) ? ' · ' + esc(x.etapa) : ''}</span>
+          <span class="dot">·</span><span>${esc(x.sol)}</span>
+        </div>
+        ${pasos}
+        ${ubic ? `<div class="bit-meta"><span>Debería ir en: ${esc(ubic)}</span></div>` : ''}
+        ${x.uso ? `<div class="bit-obs">${esc(x.uso)}</div>` : ''}
+        ${(et === 'resuelta' || et === 'rechazada') && x.obs ? `<div class="bit-obs" style="color:${et==='rechazada'?'var(--red)':'var(--mut)'}">${esc(x.obs)}</div>` : ''}
+        ${x.hist ? `<div class="sol-hist">${x.hist.split('  |  ').map(l => '· ' + esc(l)).join('<br>')}</div>` : ''}
+        ${form}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">Sin solicitudes pendientes. 🎉</div>';
+
+  $$('#solBody .sol-ok').forEach(btn => btn.onclick = () => resolverSolicitud(btn, true));
+  $$('#solBody .sol-no').forEach(btn => btn.onclick = () => resolverSolicitud(btn, false));
+}
+
+function resolverSolicitud(btn, aceptar){
+  const card = btn.closest('.bit-item');
+  const x = state.solicitudes[+card.dataset.idx];
+  const et = etapaDe(x);
+  const q = c => card.querySelector(c);
+  const cod = et === 'contab' ? q('.sol-cod').value.trim() : x.cod;
+  const cta = et === 'contab' ? q('.sol-cta').value.trim() : x.cta;
+  const aux = et === 'contab' ? q('.sol-aux').value.trim() : x.aux;
+  const obs = q('.sol-obs').value.trim();
+  const err = q('.sol-err');
+  err.style.display = 'none';
+
+  if(aceptar && et === 'contab' && (!cod || !cta)){
+    err.style.display=''; err.textContent = !cod ? 'Escribe o confirma el código asignado.' : 'Escribe la cuenta contable (si es activo, agrega también el auxiliar).';
+    return;
+  }
+  if(!aceptar && !obs){
+    err.style.display=''; err.textContent = 'Para rechazar debes explicar el motivo: el solicitante lo recibirá.';
+    q('.sol-obs').style.borderColor = 'var(--red)';
+    return;
+  }
+  if(!MM_FLOW_RESOLVER){
+    err.style.display=''; err.textContent = 'Falta configurar el flujo "MM Resolver Solicitud" (URL en el código).';
+    return;
+  }
+  const b2 = card.querySelectorAll('.sol-btns .btn');
+  b2.forEach(b => b.disabled = true); btn.textContent = 'Enviando…';
+
+  const nombre = x.sol.split('(')[0].trim();
+  const quien = state.correoUsuario || localStorage.getItem('mm_ffv_user') || '';
+  let estadoNuevo, avisarTI='No', avisarUsuario='No', asunto='', msgUsuario='', msgTI='', lineaHist='';
+  const hoy = nowStr().split(',')[0];
+  const actor = quien ? quien.split('(')[0].trim() : (et==='contab' ? 'Contabilidad' : 'TI');
+  if(!aceptar){
+    estadoNuevo = 'Rechazada'; avisarUsuario = 'Si';
+    asunto = 'Tu solicitud de material no fue aprobada';
+    msgUsuario = `Hola ${nombre}: tu solicitud de "${x.desc}" no fue aprobada. Motivo: ${obs}. Si tienes dudas, contacta a ${et==='contab'?'Contabilidad':'TI'}.`;
+    lineaHist = `${hoy} · ${et==='contab'?'Contabilidad':'TI'} (${actor}): rechazada — ${obs}`;
+  } else if(et === 'contab'){
+    estadoNuevo = 'Pendiente TI'; avisarTI = 'Si'; avisarUsuario = 'Si';
+    asunto = '🧾 Tu solicitud avanzó: contabilidad ya asignó el código';
+    msgUsuario = `Hola ${nombre}: contabilidad aprobó tu solicitud de "${x.desc}" y le asignó el código ${cod} (cuenta ${cta}${aux ? ', auxiliar ' + aux : ''}). Ahora TI está creando el recurso en iConstruye; te avisaremos cuando esté disponible.`;
+    msgTI = `🧾 Contabilidad asignó cuenta al material "${x.desc}" → código ${cod}, cuenta ${cta}${aux ? ', auxiliar ' + aux : ''}. TI: crear el recurso en iConstruye y marcarlo como creado en el portal (campanita).${obs ? ' Obs: ' + obs : ''}`;
+    lineaHist = `${hoy} · Contabilidad (${actor}): asignó código ${cod}, cuenta ${cta}${aux ? ', aux ' + aux : ''}${obs ? ' — ' + obs : ''}`;
+  } else {
+    estadoNuevo = 'Resuelta'; avisarUsuario = 'Si';
+    asunto = '✅ Tu material ya está disponible en iConstruye';
+    msgUsuario = `Hola ${nombre}: tu solicitud de "${x.desc}" ya fue creada en iConstruye con el código ${cod} (cuenta ${cta}${aux ? ', auxiliar ' + aux : ''}). Ya puedes usarlo.${obs ? ' ' + obs : ''}`;
+    lineaHist = `${hoy} · TI (${actor}): creado en iConstruye${obs ? ' — ' + obs : ''}`;
+  }
+  const histNuevo = (x.hist ? x.hist + '  |  ' : `${String(x.fecha).split(',')[0]} · Solicitado por ${nombre}  |  `) + lineaHist;
+  const dN = norm(x.dest);
+  const maestroLista = dN.includes('oficina') ? 'FFV' : (dN.includes('club') && state.aoas?.CDC ? 'CDC' : 'PROY');
+  const listaEstado = !aceptar ? 'Rechazada' : (et === 'contab' ? 'Pendiente iConstruye' : 'Vigente');
+  const payload = {Fecha:x.fecha, Solicitante:x.sol, Correo:x.correo, Descripcion:x.desc,
+                   Maestro:maestroLista, Unidad:x.uni || 'Unidad', ListaEstado:listaEstado,
+                   EstadoNuevo:estadoNuevo, Codigo:cod||'', Cuenta:cta||'', Auxiliar:aux||'', Observacion:obs,
+                   ResueltoPor:quien, Historial:histNuevo, AvisarTI:avisarTI, AvisarUsuario:avisarUsuario,
+                   AsuntoUsuario:asunto, MensajeUsuario:msgUsuario, MensajeTI:msgTI};
+
+  const cerrarLocal = () => {
+    x.estado = norm(estadoNuevo); x.cod = cod||''; x.cta = cta||''; x.aux = aux||''; x.obs = obs; x.hist = histNuevo; x.recien = true;
+    if(cod){
+      state.nuevos = (state.nuevos||[]).filter(n => n.code !== parseInt(cod,10));
+      if(aceptar) state.nuevos.push({code:parseInt(cod,10), maestro:maestroLista, desc:x.desc, uni:x.uni||'Unidad', cta:cta||'', aux:aux||'', estado:norm(listaEstado)});
+      fusionarNuevos();
+      if(state.maestro === maestroLista) cargarMaestro(state.maestro, true);
+    }
+    logBit({usuario: quien || (et==='contab' ? 'Contabilidad' : 'TI'),
+            accion: !aceptar ? 'Solicitud rechazada' : (et==='contab' ? 'Cuenta asignada · pasa a TI' : 'Material creado en iConstruye'),
+            codigo: aceptar ? cod : '—', descNueva: x.desc,
+            rama: aceptar ? `Cuenta ${cta}${aux ? ' · Auxiliar ' + aux : ''}` : (x.dest || ''),
+            estado: !aceptar ? 'Rechazada' : (et==='contab' ? 'Pendiente TI' : 'Creado'),
+            obs: !aceptar ? `Solicitado por ${x.sol}. Motivo: ${obs}`
+                 : (et==='contab' ? `Solicitado por ${x.sol}.${obs ? ' ' + obs + '.' : ''} Pendiente: TI crea el recurso en iConstruye.`
+                                  : `Solicitado por ${x.sol}. Usuario avisado por correo.${obs ? ' ' + obs : ''}`)});
+    actualizarSolicitudes(); renderSolicitudes();
+  };
+
+  fetchLimite(MM_FLOW_RESOLVER, {method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(payload)})
+    .then(r => {
+      if(r.ok || r.status === 202){
+        cerrarLocal();
+        toast(!aceptar ? `Rechazada. Se avisó a ${nombre} con el motivo.`
+              : et==='contab' ? `Asignado ${cod}. TI recibió el aviso para crearlo en iConstruye.`
+              : `Creado. Se avisó a ${nombre} que ya está disponible.`);
+      }else{
+        b2.forEach(b => b.disabled = false); btn.textContent = aceptar ? '✓ Aceptar' : '✗ Rechazar';
+        err.style.display=''; err.textContent = `El flujo respondió error ${r.status}. Verifica que el Excel no esté abierto.`;
+      }
+    })
+    .catch(() => { cerrarLocal(); toast('Enviado (sin confirmación del flujo). Verifica la hoja SOLICITUDES.', 'err'); });
+}
+
+$('#btnSolic').onclick = () => { $('#mSol').hidden = false; renderSolicitudes(); };
+$('#solClose').onclick = () => $('#mSol').hidden = true;
+$('#solVerRes').onchange = renderSolicitudes;
+
+function mostrarSelectorMaestros(){
+  let vis = 0;
+  $$('#maestroSel .ms-btn').forEach(b => { const ok = !!(state.aoas && state.aoas[b.dataset.m]); b.style.display = ok ? '' : 'none'; if(ok) vis++; });
+  $('#maestroSel').hidden = vis < 2;
+}
+function separarPorHojas(wb){
+  const res = {}, avisos = [];
+  wb.SheetNames.forEach(nom => {
+    const m = maestroDeHoja(nom);
+    if(!m) return;
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[nom], {header:1, defval:null});
+    const nCod = aoa.filter(f => String((f||[])[0]||'').trim() === 'Cod' && (f||[])[1] != null).length;
+    if(!nCod) return;
+    if(res[m]){                       // hoja repetida: nos quedamos con la mayor
+      avisos.push(`Hay más de una hoja de ${MAESTROS[m].nombre} ("${res[m].hoja}" y "${nom}"). Se usa la que tiene más materiales.`);
+      if(nCod <= res[m].n) return;
+    }
+    res[m] = {aoa, n: nCod, hoja: nom};
+  });
+  state.avisosHojas = avisos;
+  const out = {};
+  Object.keys(res).forEach(k => { out[k] = res[k].aoa; MAESTROS[k].hoja = res[k].hoja; });
+  return out;
+}
+
+/* Si el archivo trae un solo maestro en una hoja, se usa tal cual. */
+function separarMaestros(aoa){ return {PROY: aoa}; }
+
+function cargarMaestro(id, silencioso){
+  if(!state.aoas || !state.aoas[id]) return;
+  state.maestro = id;
+  localStorage.setItem('mm_ffv_maestro', id);
+  $$('#maestroSel .ms-btn').forEach(b => b.classList.toggle('act', b.dataset.m === id));
+  parseMaster(state.aoas[id], state.archivoNombre || 'SharePoint', MAESTROS[id].hoja, silencioso);
+}
+
+$$('#maestroSel .ms-btn').forEach(b => b.onclick = () => {
+  if(b.dataset.m === state.maestro) return;
+  cargarMaestro(b.dataset.m, true);
+  actualizarChip();
+  toast('Maestro activo: ' + MAESTROS[b.dataset.m].nombre);
+});
+
+function actualizarChip(){
+  const cuenta = id => (state.aoas?.[id]||[]).filter(f => String((f||[])[0]||'').trim()==='Cod' && (f||[])[1] != null).length;
+  const nP = cuenta('PROY'), nC = cuenta('CDC'), nF = cuenta('FFV');
+  $('#fileChip').classList.add('ok');
+  const pref = spMode ? 'SharePoint · ' : 'Archivo local · ';
+  const partes = [nP && `${nP} en Proyectos`, nC && `${nC} en Club de Campo`, nF && `${nF} en Oficina Central`].filter(Boolean);
+  $('#fileName').textContent = partes.length > 1 ? pref + partes.join(' · ') : `${pref}${nP + nC + nF} materiales`;
+}
+
+function aplicarMaestros(online){
+  fusionarNuevos();                                  // materiales aprobados (hoja NUEVOS) a su categoría
+  const cuenta = id => (state.aoas[id]||[]).filter(f => String((f||[])[0]||'').trim()==='Cod' && (f||[])[1] != null).length;
+  const nP = cuenta('PROY'), nF = cuenta('FFV');
+  $('#msnPROY').textContent = nP;
+  $('#msnFFV').textContent  = nF;
+  $('#maestroSel').hidden = !(nP && nF);        // el selector solo aparece si hay dos maestros
+
+  const guardado = localStorage.getItem('mm_ffv_maestro');
+  const inicial = (guardado && state.aoas[guardado] && cuenta(guardado)) ? guardado : (nP ? 'PROY' : 'FFV');
+  cargarMaestro(inicial, true);
+
+  spMode = !!online;
+  if(online) $('#btnReload').style.display = '';
+  actualizarChip();
+  mostrarSelectorMaestros();
+  actualizarSolicitudes();
+  poblarProyectos(); poblarFamilias();
+  (state.avisosHojas||[]).forEach((a,i) => setTimeout(()=> toast(a,'err'), 1200 + i*3000));
+  avisarCambios(detectarCambiosExcel());
+}
+
+function parseMaster(aoa, fname, sheetName, silencioso){
+  state.rows = []; state.tree = []; state.dupCodes = new Set();
+  state.inconsistencias = []; state.selCat = null; state.selFam = null;
+  state.sheetName = sheetName;
+
+  const seen = new Map();
+  for(let i=1; i<aoa.length; i++){          // fila 0 = encabezado
+    const [tipo, code, desc, unit, cta, aux, marca] = aoa[i] || [];
+    if(tipo == null && code == null && desc == null) continue;
+    const row = {
+      id: state.nextId++, tipo: (tipo||'').toString().trim(),
+      code: (typeof code === 'number') ? code : (code ? parseInt(code,10) : null),
+      desc: desc != null ? String(desc) : '',
+      unit: unit != null ? String(unit) : '',
+      cta:  cta  != null ? String(cta)  : '',
+      aux:  aux  != null ? String(aux)  : '',
+      origen:'original', estado:'Vigente', descOriginal:null
+    };
+    if(String(marca||'').startsWith('NUEVO')){ row.origen = 'nuevos'; row.estado = String(marca).split('|')[1] || 'Vigente'; }
+    if(row.tipo === 'Cod' && row.code != null){
+      if(seen.has(row.code)) state.dupCodes.add(row.code);
+      seen.set(row.code, true);
+    }
+    state.rows.push(row);
+  }
+  state.fileName = fname;
+  detectInconsistencias();
+  buildTree();
+  restoreLocal();
+  buildTree();               // reconstruir con cambios restaurados
+  renderTree(); renderTable(); fillFilters(); resetForm();
+
+  $('#fileChip').classList.add('ok');
+  $('#fileName').textContent = fname + '  ·  ' + state.rows.filter(r=>r.tipo==='Cod' && r.code!=null).length + ' materiales';
+  ['btnRules','btnBitacora','btnExportXlsx','btnExportBit','btnTreeFull'].forEach(id => $('#'+id).disabled = false);
+
+  logBit({usuario:$('#userName').value, accion:'Importación', codigo:fname,
+    rama:'—', estado:'Sin cambios', obs:`${MAESTROS[state.maestro]?.nombre || ''}: ${state.rows.length} filas, ${state.dupCodes.size} códigos duplicados detectados.`});
+  if(!silencioso) toast('Archivo importado correctamente.');
+}
+
+/* ---------- detección de inconsistencias ---------- */
+function detectInconsistencias(){
+  const inc = state.inconsistencias;
+  // duplicados
+  if(state.dupCodes.size){
+    inc.push({tipo:'Códigos duplicados',
+      det:`Existen ${state.dupCodes.size} códigos repetidos en el archivo original: ${[...state.dupCodes].sort((a,b)=>a-b).join(', ')}. La app no permitirá crear nuevos duplicados ni reutilizarlos.`});
+  }
+  // código no coincide con la categoría bajo la que está ubicado
+  let cur = null;
+  state.rows.forEach(r => {
+    if(r.tipo==='C') cur = r.code;
+    else if(r.tipo==='Cod' && r.code != null && cur != null){
+      const c = catOfCode(r.code);
+      if(c !== cur) inc.push({tipo:'Código fuera de su categoría',
+        det:`«${r.desc}» tiene código ${r.code} (categoría ${c}) pero está ubicado bajo la categoría ${cur}.`});
+    }
+  });
+  // separadores de sección
+  state.rows.filter(r => r.tipo==='Cod' && r.code==null).forEach(r => {
+    inc.push({tipo:'Separador de sección', det:`Fila «${r.desc}» está marcada como Cod pero sin código; se trata como separador y se preserva en la exportación.`});
+  });
+}
+
+/* ---------- árbol con detección de bloques ---------- */
+function buildTree(){
+  state.tree = [];
+  let fam = null, cat = null;
+  const catByCode = new Map();
+  const pend = [];
+  state.rows.forEach(r => {
+    if(r.tipo==='F'){ fam = {code:r.code, desc:r.desc, cats:[]}; state.tree.push(fam); }
+    else if(r.tipo==='C'){ cat = {code:r.code, desc:r.desc, fam, mats:[]}; if(fam) fam.cats.push(cat); catByCode.set(cat.code, cat); }
+    else if(r.tipo==='Cod' && r.code != null){ pend.push({r, physCat: cat}); }
+  });
+  // Asignar cada material a la categoría que indica SU CÓDIGO (code/1000).
+  // Esto es clave porque Power Automate agrega las filas nuevas al FINAL de la
+  // tabla: por posición física quedarían bajo la última categoría del archivo.
+  // Si la categoría del código no existe (casos históricos), se usa la física.
+  pend.forEach(({r, physCat}) => {
+    const target = catByCode.get(catOfCode(r.code)) || physCat;
+    if(target){ target.mats.push(r); r.cat = target; }
+  });
+  // orden por código dentro de cada categoría para un listado consistente
+  state.tree.forEach(f => f.cats.forEach(c => c.mats.sort((a,b) => a.code - b.code)));
+  // bloques por categoría: correlativos agrupados cuando hay saltos > 5
+  state.tree.forEach(f => f.cats.forEach(c => {
+    const corrs = c.mats.map(m => corrOfCode(m.code)).sort((a,b)=>a-b);
+    const blocks = [];
+    corrs.forEach(v => {
+      const b = blocks[blocks.length-1];
+      if(b && v - b.max <= 5){ b.max = Math.max(b.max, v); b.n++; }
+      else blocks.push({min:v, max:v, n:1});
+    });
+    c.blocks = blocks;
+    if(blocks.length > 1){
+      // etiquetar bloque por prefijo común "X - " si existe
+      blocks.forEach(b => {
+        const mats = c.mats.filter(m => corrOfCode(m.code) >= b.min && corrOfCode(m.code) <= b.max);
+        const prefs = new Set(mats.map(m => (m.desc.split(' - ')[0]||'').trim()));
+        b.label = (prefs.size === 1 && mats[0].desc.includes(' - '))
+          ? [...prefs][0] : `Bloque ${String(b.min).padStart(3,'0')}–${String(b.max).padStart(3,'0')}`;
+      });
+    }
+  }));
+}
+
+function renderTree(){
+  const el = $('#tree');
+  if(!state.tree.length){ el.innerHTML = '<div class="empty">Archivo sin jerarquía reconocible.</div>'; return; }
+  el.innerHTML = '';
+  let totC = 0;
+  state.tree.forEach(f => {
+    const nf = f.cats.reduce((s,c)=>s+c.mats.length,0);
+    const dv = document.createElement('div'); dv.className='t-fam';
+    dv.innerHTML = `<div class="t-row"><span class="car">▶</span><span class="cod">${f.code}</span><span class="lbl" title="${f.desc}">${f.desc}</span><span class="n">${nf}</span></div><div class="t-kids"></div>`;
+    dv.querySelector('.t-row').onclick = () => dv.classList.toggle('open');
+    const kids = dv.querySelector('.t-kids');
+    f.cats.forEach(c => {
+      totC++;
+      const cr = document.createElement('div'); cr.className='t-row'; cr.dataset.cat = c.code;
+      cr.innerHTML = `<span class="car"></span><span class="cod">${c.code}</span><span class="lbl" title="${c.desc}">${c.desc}</span><span class="n">${c.mats.length}</span>`;
+      cr.onclick = () => selectCat(c, f);
+      kids.appendChild(cr);
+    });
+    el.appendChild(dv);
+  });
+  $('#treeCount').textContent = state.tree.length + ' fam · ' + totC + ' cat';
+}
+
+function selectCat(c, f){
+  state.selCat = c; state.selFam = f;
+  $$('#tree .t-row.sel').forEach(x => x.classList.remove('sel'));
+  const row = document.querySelector(`#tree .t-row[data-cat="${c.code}"]`);
+  if(row){ row.classList.add('sel'); row.closest('.t-fam').classList.add('open'); }
+  $('#fFam').value = f.code; $('#fCat').value = c.code;
+  fillCatFilter(); $('#fCat').value = c.code;
+  renderTable();
+  setupForm();
+}
+
+/* ---------- filtros y tabla ---------- */
+function fillFilters(){
+  const fs = $('#fFam');
+  fs.innerHTML = '<option value="">Familia: todas</option>' +
+    state.tree.map(f => `<option value="${f.code}">${f.code} — ${f.desc}</option>`).join('');
+  fillCatFilter();
+}
+function fillCatFilter(){
+  const famV = $('#fFam').value;
+  const cats = state.tree.filter(f => !famV || f.code == famV).flatMap(f => f.cats);
+  $('#fCat').innerHTML = '<option value="">Categoría: todas</option>' +
+    cats.map(c => `<option value="${c.code}">${c.code} — ${c.desc}</option>`).join('');
+}
+['q','fEst','fOri'].forEach(id => $('#'+id).oninput = renderTable);
+$('#fFam').onchange = () => { fillCatFilter(); renderTable(); };
+$('#fCat').onchange = renderTable;
+
+function renderTable(){
+  const q = norm($('#q').value), famV = $('#fFam').value, catV = $('#fCat').value,
+        estV = $('#fEst').value, oriV = $('#fOri').value;
+  const tb = $('#tbody'); tb.innerHTML = '';
+  let rows = state.rows.filter(r => r.tipo==='Cod' && r.code != null);
+  if(catV) rows = rows.filter(r => r.cat && r.cat.code == catV);
+  else if(famV) rows = rows.filter(r => r.cat && r.cat.fam && r.cat.fam.code == famV);
+  if(estV) rows = rows.filter(r => r.estado === estV);
+  if(oriV) rows = rows.filter(r => r.origen === oriV);
+  if(q) rows = rows.filter(r => String(r.code).includes(q) || norm(r.desc).includes(q));
+
+  $('#tblCount').textContent = rows.length;
+  if(!rows.length){ tb.innerHTML = '<tr><td colspan="7" class="empty">Sin materiales para el filtro actual.</td></tr>'; return; }
+
+  const frag = document.createDocumentFragment();
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const pill = r.estado==='Anulado' ? 'anu' : r.estado==='Modificado' ? 'mod' : (r.origen==='app' || r.origen==='nuevos') ? 'nue' : 'vig';
+    const estTxt = (r.origen==='app' || r.origen==='nuevos') && r.estado==='Vigente' ? 'Nuevo' : r.estado;
+    const dup = state.dupCodes.has(r.code) ? ' <span class="pill dup" title="Código repetido en el archivo original">DUP</span>' : '';
+    tr.innerHTML = `
+      <td class="mono" data-label="Código">${r.code}${dup}</td>
+      <td data-label="Descripción" ${r.estado==='Anulado'?'style="text-decoration:line-through;color:var(--mut)"':''}>${r.desc}</td>
+      <td data-label="Unidad">${r.unit}</td>
+      <td class="mono" data-label="Cuenta">${r.cta}</td>
+      <td class="mono" data-label="Auxiliar">${r.aux}</td>
+      <td data-label="Estado"><span class="pill ${pill}">${estTxt}</span></td>
+      ${MOSTRAR_EDITAR ? `<td data-label="Acciones"><button class="rowbtn" data-ed="${r.id}">Editar</button></td>` : ''}`;
+    frag.appendChild(tr);
+  });
+  tb.appendChild(frag);
+  tb.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => openEdit(+b.dataset.ed));
+}
+
+/* ---------- Formulario de solicitud ---------- */
+let destinoReq = 'PROY';
+
+/* ---- Listas de proyectos: hoja PROYECTOS del Excel (Grupo | Proyecto) ---- */
+const PROYECTOS_DEFAULT = { PROY: ['Golf Bicentenario'], CDC: ['Club de Campo'] };
+function leerProyectos(wb){
+  state.proyectos = null;
+  const hoja = wb.SheetNames.find(n => norm(n).includes('proyectos'));
+  if(!hoja) return;
+  const aoa = XLSX.utils.sheet_to_json(wb.Sheets[hoja], {header:1, defval:null});
+  const out = {PROY:[], CDC:[]};
+  for(let r=1; r<aoa.length; r++){
+    const g = norm((aoa[r]||[])[0]), nom = String((aoa[r]||[])[1] || '').trim();
+    if(!nom) continue;
+    if(g.includes('club')) out.CDC.push(nom); else out.PROY.push(nom);
+  }
+  if(out.PROY.length || out.CDC.length) state.proyectos = out;
+}
+function poblarProyectos(){
+  const lista = (state.proyectos || PROYECTOS_DEFAULT)[destinoReq === 'CDC' ? 'CDC' : 'PROY'] || [];
+  const sel = $('#reqProyectoSel');
+  sel.innerHTML = '<option value="">Selecciona…</option>' +
+    lista.map(x => `<option>${esc(x)}</option>`).join('') +
+    '<option value="__otro__">Otro (escribir)…</option>';
+  $('#reqProyecto').style.display = 'none'; $('#reqProyecto').value = '';
+  if(lista.length === 1) sel.value = lista[0];          // una sola opción: queda elegida
+  $('#lblProyecto').textContent = destinoReq === 'CDC' ? '¿Qué proyecto o etapa de Club de Campo?' : '¿Qué proyecto?';
+}
+$('#reqProyectoSel').onchange = () => {
+  const otro = $('#reqProyectoSel').value === '__otro__';
+  $('#reqProyecto').style.display = otro ? '' : 'none';
+  if(otro) $('#reqProyecto').focus();
+  $('#errProyecto').style.display = 'none';
+};
+function proyectoElegido(){
+  const v = $('#reqProyectoSel').value;
+  return v === '__otro__' ? $('#reqProyecto').value.trim() : v;
+}
+
+/* ---- Familia → categoría del maestro correspondiente al destino ---- */
+function maestroDelDestino(){
+  if(destinoReq === 'FFV') return 'FFV';
+  if(destinoReq === 'CDC') return state.aoas?.CDC ? 'CDC' : 'PROY';
+  return 'PROY';
+}
+function estructuraMaestro(id){
+  const aoa = state.aoas?.[id]; if(!aoa) return [];
+  const fams = []; let f = null;
+  aoa.forEach(r => {
+    const t = String((r||[])[0]||'').trim();
+    if(t==='F' && r[1]!=null){ f = {cod:String(r[1]), nom:String(r[2]||''), cats:[]}; fams.push(f); }
+    else if(t==='C' && r[1]!=null && f) f.cats.push({cod:String(r[1]), nom:String(r[2]||'')});
+  });
+  return fams;
+}
+let ubicacion = null;   // {famCod,famNom,catCod,catNom} | {ns:true}
+let ubicAbiertas = new Set();
+
+function catalogoUbicaciones(){
+  const aoa = state.aoas?.[maestroDelDestino()]; if(!aoa) return [];
+  const out = []; let f=null, c=null;
+  aoa.forEach(r => {
+    const t = String((r||[])[0]||'').trim();
+    if(t==='F' && r[1]!=null){ f = {cod:String(r[1]), nom:String(r[2]||'').trim()}; }
+    else if(t==='C' && r[1]!=null && f){ c = {famCod:f.cod, famNom:f.nom, catCod:String(r[1]), catNom:String(r[2]||'').trim(), mats:[]}; out.push(c); }
+    else if(t==='Cod' && r[2] && c) c.mats.push(String(r[2]));
+  });
+  return out;
+}
+
+function poblarFamilias(){ fijarUbicacion(null); }
+
+function fijarUbicacion(u){
+  ubicacion = u;
+  $('#errUbic').style.display = 'none';
+  const campo = $('#ubicCampo'), txt = $('#ubicCampoTxt');
+  if(u){
+    campo.classList.add('ok');
+    txt.classList.remove('ph');
+    txt.innerHTML = u.ns
+      ? 'Lo definirá contabilidad'
+      : `<span class="cod">${esc(u.catCod)}</span> ${esc(u.catNom)} <span style="color:var(--mut)">· ${esc(u.famCod)} ${esc(u.famNom)}</span>`;
+    $('#mUbic').hidden = true;
+  }else{
+    campo.classList.remove('ok');
+    txt.classList.add('ph');
+    txt.textContent = 'Elegir ubicación en el maestro…';
+  }
+}
+
+/* ---- Ventana exploradora ---- */
+function abrirUbicacion(){
+  $('#mUbic').hidden = false;
+  $('#ubicFiltro').value = '';
+  ubicAbiertas = new Set();
+  sugerirEnVentana();
+  renderArbolUbic();
+  setTimeout(() => $('#ubicFiltro').focus(), 50);
+}
+$('#ubicCampo').onclick = abrirUbicacion;
+$('#ubicCerrar').onclick = $('#ubicCerrarX').onclick = () => { $('#mUbic').hidden = true; };
+$('#ubicNS').onclick = () => fijarUbicacion({ns:true});
+
+function marcar(texto, q){
+  if(!q) return esc(texto);
+  const idx = norm(texto).indexOf(q);
+  if(idx < 0) return esc(texto);
+  // aproximación simple: resalta la primera coincidencia literal si existe
+  const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')','i');
+  return esc(texto).replace(re, '<mark>$1</mark>');
+}
+
+function renderArbolUbic(){
+  const q = norm($('#ubicFiltro').value);
+  const cats = catalogoUbicaciones();
+  const porFam = new Map();
+  cats.forEach(c => {
+    if(q && !(norm(c.catNom).includes(q) || norm(c.famNom).includes(q) || c.catCod.startsWith(q)
+              || c.mats.some(m => norm(m).includes(q)))) return;
+    if(!porFam.has(c.famCod)) porFam.set(c.famCod, {nom:c.famNom, cats:[]});
+    porFam.get(c.famCod).cats.push(c);
+  });
+  const cont = $('#ubicArbol');
+  if(!porFam.size){ cont.innerHTML = '<div class="ua-vacio">Nada parecido. Prueba con otra palabra, o marca "No estoy seguro".</div>'; return; }
+  let html = '';
+  porFam.forEach((f, cod) => {
+    const abierta = q ? true : ubicAbiertas.has(cod);
+    html += `<div class="ua-f ${abierta?'abierta':''}" data-f="${esc(cod)}">
+      <span class="flecha">▶</span><span class="cod">${esc(cod)}</span> ${marcar(f.nom, q)}
+      <span class="n">${f.cats.length} categ.</span></div>`;
+    if(abierta) f.cats.forEach(c => {
+      html += `<div class="ua-c" data-fam="${esc(c.famCod)}" data-cat="${esc(c.catCod)}">
+        <span class="cod">${esc(c.catCod)}</span> <span>${marcar(c.catNom, q)}</span></div>`;
+    });
+  });
+  cont.innerHTML = html;
+  $$('#ubicArbol .ua-f').forEach(el => el.onclick = () => {
+    const cod = el.dataset.f;
+    ubicAbiertas.has(cod) ? ubicAbiertas.delete(cod) : ubicAbiertas.add(cod);
+    renderArbolUbic();
+  });
+  $$('#ubicArbol .ua-c').forEach(el => el.onclick = () => {
+    const c = cats.find(x => x.famCod === el.dataset.fam && x.catCod === el.dataset.cat);
+    if(c) fijarUbicacion(c);
+  });
+}
+$('#ubicFiltro').addEventListener('input', renderArbolUbic);
+
+/* Sugerencias dentro de la ventana según lo que escribió en la descripción */
+function sugerirEnVentana(){
+  const cont = $('#ubicSugM');
+  const q = $('#newDesc').value.trim();
+  cont.innerHTML = '';
+  if(q.length < 4) return;
+  const cats = catalogoUbicaciones();
+  const VACIAS = new Set(['para','como','este','esta','estos','estas','donde','cual','sera','tipo','unos','unas','sobre','entre']);
+  const palabras = (norm(q).match(/[a-z0-9]{4,}/g) || []).filter(w => !VACIAS.has(w));
+  const bolsas = cats.map(c => norm(c.catNom) + '|' + c.mats.slice(0,400).map(norm).join('|'));
+  const raras = palabras.filter(w => {
+    const df = bolsas.reduce((n,b) => n + (b.includes(w) ? 1 : 0), 0);
+    return df > 0 && df <= 12;
+  });
+  const punt = cats.map((c,i) => {
+    let sc = Math.max(similarity(c.catNom, q) * 1.1, ...c.mats.slice(0,400).map(m => similarity(m, q)));
+    const hits = raras.filter(w => bolsas[i].includes(w)).length;
+    if(hits) sc = Math.max(sc, 0.6 + 0.15 * hits);
+    return {c, sc};
+  }).filter(x => x.sc >= 0.45).sort((a,b) => b.sc - a.sc).slice(0,3);
+  if(!punt.length) return;
+  cont.innerHTML = `<div class="sug-t">Sugerencias para "${esc(q.slice(0,40))}"</div>` +
+    punt.map((x,i) => `<button type="button" class="sug-b" data-i="${i}">
+      <span class="cod">${esc(x.c.catCod)}</span> ${esc(x.c.catNom)}
+      <small>· en ${esc(x.c.famCod)} ${esc(x.c.famNom)}</small></button>`).join('');
+  $$('#ubicSugM .sug-b').forEach(b => b.onclick = () => fijarUbicacion(punt[+b.dataset.i].c));
+}
+
+function famCatElegidas(){
+  if(!ubicacion) return {familia:'', categoria:''};
+  if(ubicacion.ns) return {familia:'Por definir', categoria:'No estoy seguro'};
+  return {familia:`${ubicacion.famCod} ${ubicacion.famNom}`, categoria:`${ubicacion.catCod} ${ubicacion.catNom}`};
+}
+
+$$('#destinoSeg .seg-b').forEach(b => b.onclick = () => {
+  destinoReq = b.dataset.d;
+  $$('#destinoSeg .seg-b').forEach(x => x.classList.toggle('act', x === b));
+  const conProyecto = destinoReq !== 'FFV';
+  $('#fldProyecto').style.display = conProyecto ? '' : 'none';
+  $('#fldEtapa').style.display    = conProyecto ? '' : 'none';
+  poblarProyectos(); poblarFamilias(); buscarSimilares();
+});
+
+/* Al elegir una rama en el árbol solo se navega: ya no condiciona la solicitud */
+function setupForm(){}
+function proposeCode(){}
+
+/* Busca materiales parecidos en AMBOS catálogos para evitar pedir algo que ya existe */
+function buscarSimilares(){
+  const q = $('#newDesc').value.trim();
+  const cont = $('#similares');
+  if(q.length < 4){ cont.innerHTML = ''; state.similares = []; return; }
+  const res = [];
+  ['PROY','FFV'].forEach(id => {
+    const aoa = state.aoas?.[id]; if(!aoa) return;
+    let fam = null, cat = null;
+    aoa.forEach(f => {
+      const t = String((f||[])[0]||'').trim();
+      if(t === 'F') fam = `${f[1]} ${f[2]}`;
+      else if(t === 'C') cat = `${f[1]} ${f[2]}`;
+      else if(t === 'Cod' && f[1] != null && f[2]){
+        const sc = similarity(String(f[2]), q);
+        if(sc >= 0.55) res.push({cod:f[1], desc:String(f[2]), cat, maestro:MAESTROS[id].nombre, sc});
+      }
+    });
+  });
+  res.sort((a,b) => b.sc - a.sc);
+  state.similares = res.slice(0,5);
+  cont.innerHTML = state.similares.length
+    ? `<div class="sim-box"><b>Ojo:</b> ya existe algo parecido en el maestro. Revisa si alguno te sirve:
+        <ul>${state.similares.map(m => `<li><code>${m.cod}</code> ${esc(m.desc)} <span style="color:var(--mut)">· ${esc(m.maestro)}</span></li>`).join('')}</ul></div>`
+    : '';
+}
+$('#newDesc').oninput = () => { $('#descHint').style.display='none'; $('#newDesc').style.borderColor=''; buscarSimilares(); };
+['reqProyecto','reqUso','userName','userMail'].forEach(id => {
+  const el = $('#'+id); if(el) el.oninput = () => { el.style.borderColor=''; };
+});
+$('#reqEtapa').onchange = () => { $('#reqEtapa').style.borderColor=''; $('#errEtapa').style.display='none'; };
+
+const CAMPOS_ERR = ['descHint','errProyecto','errEtapa','errUso','errUser','errMail','errUbic'];
+function limpiarErrores(){
+  CAMPOS_ERR.forEach(id => { const e=$('#'+id); if(e){ e.style.display='none'; e.textContent=''; } });
+  ['newDesc','reqProyecto','reqProyectoSel','reqEtapa','reqUso','userName','userMail'].forEach(id => {
+    const e=$('#'+id); if(e) e.style.borderColor='';
+  });
+}
+function marcarError(campo, hint, msg){
+  const h=$('#'+hint); if(h){ h.style.display=''; h.textContent=msg; }
+  const c=$('#'+campo); if(c) c.style.borderColor='var(--red)';
+}
+
+function validarSolicitud(){
+  limpiarErrores();
+  const errs = [];
+  const desc = $('#newDesc').value.trim();
+  const push = (campo, hint, msg) => { errs.push({campo, hint, msg}); };
+
+  if(destinoReq !== 'FFV'){
+    if(!proyectoElegido()) push($('#reqProyectoSel').value === '__otro__' ? 'reqProyecto' : 'reqProyectoSel','errProyecto','Indica a qué proyecto corresponde.');
+    if(!$('#reqEtapa').value) push('reqEtapa','errEtapa','Selecciona la etapa: define la cuenta contable.');
+  }
+  if(!desc) push('newDesc','descHint','Escribe qué material o insumo necesitas.');
+  if(!ubicacion) push('ubicCampo','errUbic','Indica dónde debería ir: ábrelo y elige la categoría, o marca "No estoy seguro".');
+  if(!$('#reqUso').value.trim()) push('reqUso','errUso','Explica brevemente para qué se usará.');
+  if(!$('#userName').value.trim()) push('userName','errUser','Indica tu nombre como solicitante.');
+  const mail = $('#userMail').value.trim();
+  if(!mail) push('userMail','errMail','Indica tu correo: ahí te avisarán cuando esté creado.');
+  else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) push('userMail','errMail','Ese correo no parece válido.');
+
+  errs.forEach(e => marcarError(e.campo, e.hint, e.msg));
+  if(errs.length){
+    const primero = $('#'+errs[0].campo);
+    if(primero){ primero.scrollIntoView({behavior:'smooth', block:'center'}); primero.focus(); }
+  }
+  return {errs: errs.map(e => e.msg), desc};
+}
+
+$('#btnPreview').onclick = () => {
+  const v = validarSolicitud();
+  if(v.errs.length){
+    toast(v.errs.length === 1 ? v.errs[0] : `Faltan ${v.errs.length} datos para enviar la solicitud.`, 'err');
+    return;
+  }
+  const esProy = destinoReq !== 'FFV';
+  const fc = famCatElegidas();
+  $('#pvKv').innerHTML = `
+    <dt>Necesito</dt><dd>${esc(v.desc)}</dd>
+    <dt>Destino</dt><dd>${esProy ? (destinoReq==='CDC' ? 'Club de Campo: ' : 'Proyecto: ') + esc(proyectoElegido()) : 'Oficina Central'}</dd>
+    ${esProy ? `<dt>Etapa</dt><dd>${esc($('#reqEtapa').value)}</dd>` : ''}
+    <dt>Debería ir en</dt><dd style="font-weight:400">${esc(fc.familia)}${fc.categoria ? ' › ' + esc(fc.categoria) : ''}</dd>
+    <dt>Uso previsto</dt><dd style="font-weight:400">${esc($('#reqUso').value.trim())}</dd>
+    <dt>Unidad de medida</dt><dd>${esc($('#newUnit').value.trim()||'Unidad')}</dd>
+    <dt>Solicitante</dt><dd>${esc($('#userName').value.trim())}</dd>
+    <dt>Aviso a</dt><dd style="font-weight:400">${esc($('#userMail').value.trim())}</dd>
+    <dt>Estado</dt><dd>Pendiente — TI y Contabilidad asignarán el código y la cuenta</dd>`;
+  const sw = $('#pvSim');
+  if(state.similares?.length){
+    sw.style.display='';
+    sw.innerHTML = `<b>Antes de enviar:</b> existen materiales parecidos. Si alguno te sirve, no hace falta pedir uno nuevo.
+      <ul>${state.similares.map(m=>`<li><code>${m.cod}</code> ${esc(m.desc)} · ${esc(m.maestro)}</li>`).join('')}</ul>`;
+  } else sw.style.display='none';
+  $('#mPreview').hidden = false;
+};
+$('#pvCancel').onclick = () => $('#mPreview').hidden = true;
+
+function ramaStr(){
+  return state.selCat ? `${state.selFam.code} ${state.selFam.desc} → ${state.selCat.code} ${state.selCat.desc}` : '—';
+}
+
+function enviarSolicitud(){
+  const esProy = destinoReq !== 'FFV';
+  const fc = famCatElegidas();
+  const _sol = $('#userName').value.trim();
+  const _mat = $('#newDesc').value.trim();
+  const _uso = $('#reqUso').value.trim();
+  const _dst = destinoReq === 'CDC' ? 'Club de Campo' : (destinoReq !== 'FFV' ? 'Proyecto' : 'Oficina Central');
+  const _pry = destinoReq !== 'FFV' ? proyectoElegido() : 'Oficina Central';
+  const _eta = destinoReq !== 'FFV' ? $('#reqEtapa').value : '';
+  const _ubi = [fc.familia, fc.categoria].filter(Boolean).join(' › ');
+  const MensajeContab =
+    `Hola: hay una nueva solicitud de material pendiente de revisión.<br><br>` +
+    `<b>Material:</b> ${_mat}<br>` +
+    (_uso ? `<b>Uso previsto:</b> ${_uso}<br>` : '') +
+    `<b>Destino:</b> ${_dst === 'Oficina Central' ? 'Oficina Central' : _dst + ' · ' + _pry + (_eta ? ' · ' + _eta : '')}<br>` +
+    (_ubi ? `<b>Debería ir en:</b> ${_ubi}<br>` : '') +
+    `<b>Solicitante:</b> ${_sol} (${$('#userMail').value.trim()})<br><br>` +
+    `Entra al portal del Maestro de Materiales (campanita 🔔) para asignar el código y la cuenta contable — y el auxiliar si es cuenta de activo.`;
+  const payload = {
+    Solicitante: $('#userName').value.trim(),
+    Correo: $('#userMail').value.trim(),
+    AsuntoContab: `🔔 Nueva solicitud: ${_mat}${_dst !== 'Oficina Central' && _pry ? ' — ' + _pry : ''}`,
+    MensajeContab,
+    Fecha: nowStr(),
+    Destino: destinoReq === 'CDC' ? 'Club de Campo' : (esProy ? 'Proyecto' : 'Oficina Central'),
+    Proyecto: esProy ? proyectoElegido() : 'Oficina Central',
+    Etapa: esProy ? $('#reqEtapa').value : 'No aplica (Oficina Central)',
+    Familia: fc.familia,
+    Categoria: fc.categoria,
+    Descripcion: $('#newDesc').value.trim(),
+    Uso: $('#reqUso').value.trim(),
+    Unidad: $('#newUnit').value.trim() || 'Unidad',
+    Similares: (state.similares||[]).length
+      ? state.similares.map(m => `${m.cod} ${m.desc} (${m.maestro})`).join(' · ')
+      : 'Ninguno parecido en el maestro'
+  };
+  logBit({usuario:payload.Solicitante, accion:'Solicitud a TI', codigo:'—',
+    descNueva:payload.Descripcion, rama:`${payload.Destino}${esProy ? ' · ' + payload.Etapa : ''}`,
+    estado:'Pendiente', obs:'Enviada por Teams. TI y Contabilidad asignarán código y cuenta.'});
+
+  if(!MM_FLOW_SOLICITAR){
+    toast('Falta configurar el flujo "MM Solicitar Material". La solicitud quedó en la bitácora.', 'err');
+    return;
+  }
+  const ov = $('#spLoading'), fill = $('#spLoadingFill'), sub = $('#spLoadingSub');
+  $('#spLoadingMsg').textContent = 'Enviando solicitud…';
+  sub.textContent = 'Avisando a TI y Contabilidad por Teams';
+  ov.hidden = false; fill.style.width = '40%';
+  setTimeout(()=> fill.style.width = '80%', 300);
+
+  const resumen = `<b>${esc(payload.Descripcion)}</b><br>
+    ${esc(payload.Destino)}${esProy ? ' · ' + esc(payload.Proyecto) + ' · ' + esc(payload.Etapa) : ''}<br>
+    <span style="color:var(--mut)">Solicitado por ${esc(payload.Solicitante)}</span>`;
+
+  const cerrar = () => { ov.hidden = true; fill.style.width='0'; };
+  const mostrar = (icono, titulo, texto) => {
+    cerrar();
+    $('#okIcon').textContent = icono;
+    $('#okTitulo').textContent = titulo;
+    $('#okTexto').innerHTML = texto;
+    $('#okResumen').innerHTML = resumen;
+    $('#mOk').hidden = false;
+  };
+
+  /* POST simple (text/plain no dispara pre-consulta CORS). Si el flujo
+     tiene acción "Respuesta", podemos leerla y confirmar de verdad. */
+  fetchLimite(MM_FLOW_SOLICITAR, {method:'POST', headers:{'Content-Type':'text/plain'},
+                            body: JSON.stringify(payload)})
+    .then(async r => {
+      fill.style.width='100%';
+      if(r.ok || r.status === 202){
+        mostrar('✅','Solicitud enviada',
+          'TI y Contabilidad ya la recibieron en Teams. Te responderán con el código asignado.');
+      }else{
+        const t = await r.text().catch(()=> '');
+        mostrar('⚠️','El flujo respondió con error',
+          `Código ${r.status}. La solicitud quedó en la bitácora, pero <b>puede que no haya llegado a Teams</b>.<br>
+           <span style="font-size:11.5px">${esc(t.slice(0,140))}</span>`);
+      }
+    })
+    .catch(() => {
+      // El navegador no pudo leer la respuesta: el mensaje probablemente sí salió,
+      // pero no hay forma de confirmarlo hasta que el flujo tenga acción "Respuesta".
+      mostrar('📨','Solicitud enviada, sin confirmación',
+        'Los datos salieron hacia el flujo, pero no se pudo confirmar la entrega.<br>' +
+        '<span style="font-size:12px">Para tener confirmación, el flujo necesita una acción <b>Respuesta</b> ' +
+        'con el encabezado <code>Access-Control-Allow-Origin: *</code>.</span><br>' +
+        '<b>Revisa en Teams que haya llegado.</b>');
+    });
+}
+$('#okCerrar').onclick = () => $('#mOk').hidden = true;
+
+$('#pvConfirm').onclick = () => {
+  const v = validarSolicitud();
+  if(v.errs.length){ $('#mPreview').hidden = true; toast(v.errs[0], 'err'); return; }
+  enviarSolicitud();
+  $('#mPreview').hidden = true;
+  $('#newDesc').value=''; $('#reqUso').value=''; $('#similares').innerHTML=''; state.similares=[];
+  fijarUbicacion(null);
+};
+
+/* ---------- edición / anulación ---------- */
+let editTarget = null;
+function openEdit(id){
+  editTarget = state.rows.find(r => r.id === id);
+  if(!editTarget) return;
+  $('#edCode').textContent = editTarget.code;
+  $('#edDesc').value = editTarget.desc;
+  $('#edUser').value = $('#userName').value;
+  $('#edObs').value = '';
+  $('#edAnular').textContent = editTarget.estado==='Anulado' ? 'Reactivar material' : 'Anular material';
+  $('#mEdit').hidden = false;
+}
+$('#edCancel').onclick = () => $('#mEdit').hidden = true;
+$('#edSave').onclick = () => {
+  const nd = $('#edDesc').value.trim();
+  if(!nd){ toast('La descripción no puede quedar vacía.','err'); return; }
+  if(!$('#edUser').value.trim()){ toast('Indica el responsable del cambio.','err'); return; }
+  if(nd !== editTarget.desc){
+    const old = editTarget.desc;
+    if(editTarget.descOriginal == null && editTarget.origen==='original') editTarget.descOriginal = old;
+    editTarget.desc = nd;
+    if(editTarget.origen==='original') editTarget.estado = 'Modificado';
+    const rama = editTarget.cat ? `${editTarget.cat.fam.code} → ${editTarget.cat.code} ${editTarget.cat.desc}` : '—';
+    logBit({usuario:$('#edUser').value, accion:'Modificación', codigo:editTarget.code,
+      descAnt:old, descNueva:nd, rama, estado:'Modificado', obs:$('#edObs').value});
+    pushUpdateToSharePoint(
+      { Codigo:String(editTarget.code), Descripcion:nd },
+      { Fecha:nowStr(), Usuario:$('#edUser').value.trim(), Accion:'Modificación',
+        Codigo:String(editTarget.code), DescNueva:nd, Rama:rama, Estado:'Modificado',
+        Obs: ('Desc. anterior: '+old + ($('#edObs').value ? ' | '+$('#edObs').value : '')) }
+    );
+  } else {
+    toast('Sin cambios en la descripción.');
+  }
+  $('#mEdit').hidden = true; renderTable();
+};
+$('#edAnular').onclick = () => {
+  if(!$('#edUser').value.trim()){ toast('Indica el responsable del cambio.','err'); return; }
+  const anulando = editTarget.estado !== 'Anulado';
+  editTarget.estado = anulando ? 'Anulado' : (editTarget.origen==='app' ? 'Vigente' : (editTarget.descOriginal!=null?'Modificado':'Vigente'));
+  const rama = editTarget.cat ? `${editTarget.cat.fam.code} → ${editTarget.cat.code} ${editTarget.cat.desc}` : '—';
+  logBit({usuario:$('#edUser').value, accion: anulando?'Anulación':'Reactivación', codigo:editTarget.code,
+    descAnt:editTarget.desc, descNueva:editTarget.desc, rama,
+    estado: editTarget.estado, obs:$('#edObs').value || (anulando?'Anulación lógica; el registro se conserva.':'')});
+  // registrar centralmente en la bitácora de SharePoint (la descripción no cambia)
+  pushUpdateToSharePoint(
+    { Codigo:String(editTarget.code), Descripcion:editTarget.desc },
+    { Fecha:nowStr(), Usuario:$('#edUser').value.trim(), Accion: anulando?'Anulación':'Reactivación',
+      Codigo:String(editTarget.code), DescNueva:editTarget.desc, Rama:rama, Estado:editTarget.estado,
+      Obs: $('#edObs').value || (anulando?'Anulación lógica; el registro se conserva.':'') }
+  );
+  $('#mEdit').hidden = true; renderTable();
+};
+
+/* ---------- bitácora UI ---------- */
+$('#btnBitacora').onclick = () => { renderBit(); $('#mBit').hidden = false; };
+$('#bitLimpiar').onclick = () => {
+  if(!confirm('¿Vaciar la bitácora completa de este navegador?\n\nSe borran los ' + (state.bitacora||[]).length + ' registros. Si quieres conservarlos, usa antes "Exportar bitácora".')) return;
+  state.bitacora = [];
+  saveLocal(true);
+  $('#bitCount').style.display = 'none';
+  renderBit();
+  toast('Bitácora vaciada. Empieza limpia para el estreno.');
+};
+$('#bitClose').onclick = () => $('#mBit').hidden = true;
+function renderBit(){
+  const verSist = $('#bitSys').checked;
+  const SIST = ['Importación','Exportación'];
+  const items = state.bitacora.filter(b => verSist || !SIST.includes(b.accion));
+  $('#bitTotal').textContent = items.length + (items.length===1 ? ' registro' : ' registros');
+
+  const clase = a => {
+    if(/Alta|Creación|Reactivación/.test(a)) return 'alta';
+    if(/Cambio|Modificación/.test(a))        return 'camb';
+    if(/Baja|Anulación|Rechaz/.test(a))      return 'baja';
+    if(/Solicitud|Intento/.test(a))          return 'soli';
+    return 'sist';
+  };
+  const partes = ts => {
+    const p = String(ts).split(', ');
+    let hora = (p[1] || '')
+      .replace(/:\d\d(?=\D*$)/, '')          // quitar segundos
+      .replace(/\s*a\.?\s*m\.?/i, ' AM')     // tolerante a espacios especiales
+      .replace(/\s*p\.?\s*m\.?/i, ' PM')
+      .trim();
+    return {dia: p[0] || String(ts), hora};
+  };
+  const hoy = partes(nowStr()).dia;
+
+  let html = '', diaActual = null;
+  items.forEach(b => {
+    const {dia, hora} = partes(b.ts);
+    if(dia !== diaActual){
+      diaActual = dia;
+      html += '<div class="bit-day">' + (dia === hoy ? 'Hoy · ' + dia : dia) + '</div>';
+    }
+    const esCod = b.codigo && b.codigo !== '—' && /^\d+$/.test(String(b.codigo));
+    const ant = b.descAnt && b.descAnt !== '—' ? b.descAnt : null;
+    const nue = b.descNueva && b.descNueva !== '—' ? b.descNueva : null;
+    let desc = '';
+    if(ant && nue && ant !== nue) desc = '<span class="old">'+esc(ant)+'</span><span class="arw">→</span>'+esc(nue);
+    else if(nue) desc = esc(nue);
+    else if(ant) desc = '<span class="old">'+esc(ant)+'</span>';
+
+    const meta = [];
+    if(b.rama && b.rama !== '—') meta.push(esc(b.rama));
+    if(b.usuario && b.usuario !== '—') meta.push(esc(b.usuario));
+
+    html += '<div class="bit-item">'
+      + '<div class="bit-time">' + hora + '</div>'
+      + '<div class="bit-body2">'
+      +   '<div class="bit-l1">'
+      +     '<span class="bit-tag ' + clase(b.accion) + '">' + esc(b.accion) + '</span>'
+      +     (esCod ? '<span class="bit-code">' + esc(b.codigo) + '</span>' : '')
+      +     (!esCod && b.codigo && b.codigo !== '—' ? '<span class="bit-meta">' + esc(b.codigo) + '</span>' : '')
+      +   '</div>'
+      +   (desc ? '<div class="bit-desc">' + desc + '</div>' : '')
+      +   (meta.length ? '<div class="bit-meta">' + meta.join('<span class="dot">·</span>') + '</div>' : '')
+      +   (b.obs ? '<div class="bit-obs">' + esc(b.obs) + '</div>' : '')
+      + '</div></div>';
+  });
+  $('#bitBody').innerHTML = html || '<div class="empty">Sin registros para mostrar.</div>';
+}
+$('#bitSys').onchange = renderBit;
+
+/* ---------- Explorador del maestro (navegación por niveles) ---------- */
+function esc(s){ return String(s??'').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function hl(txt, q){
+  const t = esc(txt);
+  if(!q) return t;
+  const i = norm(txt).indexOf(q);
+  if(i < 0) return t;
+  return esc(txt.slice(0,i)) + '<mark>' + esc(txt.slice(i, i+q.length)) + '</mark>' + esc(txt.slice(i+q.length));
+}
+const tfNav = {fam:null, cat:null};
+
+function tfGo(fam, cat){
+  tfNav.fam = fam; tfNav.cat = cat;
+  $('#tfQ').value = '';
+  renderTreeFull();
+  $('#tfBody').scrollTop = 0;
+}
+
+function renderCrumb(){
+  const c = $('#tfCrumb');
+  const parts = [`<button class="cb ${!tfNav.fam?'act':''}" data-go="root">Maestro de Materiales</button>`];
+  if(tfNav.fam) parts.push(`<span class="sep">▸</span><button class="cb ${!tfNav.cat?'act':''}" data-go="fam">${tfNav.fam.code} ${esc(tfNav.fam.desc)}</button>`);
+  if(tfNav.cat) parts.push(`<span class="sep">▸</span><button class="cb act">${tfNav.cat.code} ${esc(tfNav.cat.desc)}</button>`);
+  c.innerHTML = parts.join('');
+  c.querySelectorAll('[data-go]').forEach(b => b.onclick = () =>
+    b.dataset.go === 'root' ? tfGo(null,null) : tfGo(tfNav.fam,null));
+}
+
+function renderAnat(){
+  const f = tfNav.fam, c = tfNav.cat;
+  const seg = (cls, k, v, ghost) =>
+    `<div class="anat-seg ${cls}${ghost?' ghost':''}"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const ejemplo = c && c.mats.length ? c.mats[c.mats.length-1] : null;
+  const corr = ejemplo ? String(corrOfCode(ejemplo.code)).padStart(3,'0') : '001';
+  $('#tfAnat').innerHTML =
+    `<span class="lbl">Cómo se compone un código</span>` +
+    seg('f','Familia', f ? f.code : '—', !f) +
+    `<span class="anat-op">▸</span>` +
+    seg('c','Categoría', c ? c.code : '—', !c) +
+    `<span class="anat-op">+</span>` +
+    seg('m','Correlativo', c ? corr : '—', !c) +
+    (c ? `<div class="anat-res">Código resultante · <b>${c.code}${corr}</b></div>`
+       : `<div class="anat-res">El código de cada material es <b>categoría + correlativo de 3 dígitos</b></div>`);
+}
+
+function renderTreeFull(){
+  renderCrumb(); renderAnat();
+  const q = norm($('#tfQ').value), body = $('#tfBody');
+
+  /* --- modo búsqueda: resultados planos con su ruta --- */
+  if(q){
+    const res = [];
+    state.tree.forEach(f => f.cats.forEach(c => c.mats.forEach(m => {
+      if(norm(m.desc).includes(q) || String(m.code).includes(q)) res.push({f,c,m});
+    })));
+    const cats = [];
+    state.tree.forEach(f => f.cats.forEach(c => {
+      if(norm(c.desc).includes(q) || String(c.code).includes(q)) cats.push({f,c});
+    }));
+    body.innerHTML =
+      (cats.length ? `<p class="tf-sec">${cats.length} categoría(s) encontradas</p><div class="tf-grid">` +
+        cats.map((x,i) => `<div class="tile cat" data-cq="${i}">
+          <div class="t-top"><span class="t-cod">${x.c.code}</span><span class="t-chev">›</span></div>
+          <div class="t-name">${hl(x.c.desc,q)}</div>
+          <div class="t-meta"><span>${x.c.mats.length} materiales</span><span class="t-pat">${x.f.code} ${esc(x.f.desc)}</span></div>
+        </div>`).join('') + '</div>' : '') +
+      (res.length ? `<p class="tf-sec" style="margin-top:${cats.length?22:0}px">${res.length} material(es) encontrados</p>
+        <div class="mat-hd"><span class="a">Código</span><span class="b">Descripción</span></div>
+        <div class="mat-list">` +
+        res.slice(0,400).map(x => {
+          const s = String(x.m.code), p = String(x.c.code);
+          return `<div class="mat-row"><span class="m-cod"><span class="pfx">${p}</span><span class="sfx">${s.slice(p.length)}</span></span>
+            <span class="m-desc"><span class="res-path">${x.f.code} ${esc(x.f.desc)} › ${x.c.code} ${esc(x.c.desc)}</span>${hl(x.m.desc,q)}</span>
+            <span class="m-uni">${esc(x.m.unit)}</span></div>`;
+        }).join('') + '</div>' +
+        (res.length>400 ? '<p class="tf-sec" style="margin-top:10px">Mostrando los primeros 400 resultados.</p>' : '') : '');
+    if(!res.length && !cats.length) body.innerHTML = '<div class="empty">Sin resultados para esa búsqueda.</div>';
+    body.querySelectorAll('[data-cq]').forEach(el => el.onclick = () => {
+      const x = cats[+el.dataset.cq]; tfGo(x.f, x.c);
+    });
+    return;
+  }
+
+  /* --- nivel 3: materiales de una categoría --- */
+  if(tfNav.cat){
+    const c = tfNav.cat, p = String(c.code);
+    body.innerHTML = `<button class="tf-back" id="tfBack">‹ Volver a ${tfNav.fam.code} ${esc(tfNav.fam.desc)}</button>
+      <p class="tf-sec">${c.mats.length} materiales · el prefijo <span style="color:#6d7b8b">${p}</span> identifica la categoría, los <span style="color:var(--amber)">3 últimos dígitos</span> son el correlativo</p>
+      <div class="mat-hd"><span class="a">Código</span><span class="b">Descripción</span></div>
+      <div class="mat-list">` +
+      (c.mats.length ? c.mats.map(m => {
+        const s = String(m.code);
+        return `<div class="mat-row"><span class="m-cod"><span class="pfx">${p}</span><span class="sfx">${s.slice(p.length)}</span></span>
+          <span class="m-desc">${esc(m.desc)}</span><span class="m-uni">${esc(m.unit)}</span></div>`;
+      }).join('') : '<div class="mat-row" style="color:var(--mut)">Esta categoría aún no tiene materiales.</div>') + '</div>';
+    $('#tfBack').onclick = () => tfGo(tfNav.fam, null);
+    return;
+  }
+
+  /* --- nivel 2: categorías de una familia --- */
+  if(tfNav.fam){
+    const f = tfNav.fam;
+    body.innerHTML = `<button class="tf-back" id="tfBack">‹ Volver a todas las familias</button>
+      <p class="tf-sec">${f.cats.length} categorías en ${f.code} ${esc(f.desc)}</p><div class="tf-grid">` +
+      f.cats.map((c,i) => `<div class="tile cat" data-ci="${i}">
+        <div class="t-top"><span class="t-cod">${c.code}</span><span class="t-chev">›</span></div>
+        <div class="t-name">${esc(c.desc)}</div>
+        <div class="t-meta"><span>${c.mats.length} materiales</span><span class="t-pat">${c.code}···</span></div>
+      </div>`).join('') + '</div>';
+    $('#tfBack').onclick = () => tfGo(null, null);
+    body.querySelectorAll('[data-ci]').forEach(el => el.onclick = () => tfGo(f, f.cats[+el.dataset.ci]));
+    return;
+  }
+
+  /* --- nivel 1: familias --- */
+  const totM = state.tree.reduce((s,f)=>s+f.cats.reduce((a,c)=>a+c.mats.length,0),0);
+  const totC = state.tree.reduce((s,f)=>s+f.cats.length,0);
+  body.innerHTML = `<p class="tf-sec">${state.tree.length} familias · ${totC} categorías · ${totM} materiales — elige una familia para explorar</p>
+    <div class="tf-grid">` +
+    state.tree.map((f,i) => {
+      const n = f.cats.reduce((a,c)=>a+c.mats.length,0);
+      return `<div class="tile fam" data-fi="${i}">
+        <div class="t-top"><span class="t-cod">${f.code}</span><span class="t-chev">›</span></div>
+        <div class="t-name">${esc(f.desc)}</div>
+        <div class="t-meta"><span>${f.cats.length} categorías</span><span>${n} materiales</span></div>
+      </div>`;
+    }).join('') + '</div>';
+  body.querySelectorAll('[data-fi]').forEach(el => el.onclick = () => tfGo(state.tree[+el.dataset.fi], null));
+}
+
+$('#btnTreeFull').onclick = () => { $('#mTreeFull').hidden = false; tfGo(null,null); };
+$('#tfClose').onclick = () => $('#mTreeFull').hidden = true;
+$('#tfQ').oninput = renderTreeFull;
+
+/* ============================================================
+   DETECCIÓN DE CAMBIOS HECHOS DIRECTAMENTE EN EL EXCEL
+   La app guarda una "foto" del maestro (código → datos) y en cada
+   carga la compara con la actual. Así, aunque TI edite el archivo
+   a mano, quedan a la vista las altas, cambios y bajas.
+   ============================================================ */
+const LS_SNAP = 'mm_ffv_snapshot_v1';
+
+/* ---------- Tema claro / oscuro (claro por defecto) ---------- */
+(function(){
+  const t = localStorage.getItem('mm_ffv_theme') || 'light';
+  document.documentElement.dataset.theme = t;
+})();
+function pintarBotonTema(){
+  const t = document.documentElement.dataset.theme;
+  $('#icoLuna').style.display = t === 'light' ? '' : 'none';   // en claro se ofrece la luna
+  $('#icoSol').style.display  = t === 'light' ? 'none' : '';   // en oscuro se ofrece el sol
+  $('#btnTheme').title = t === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro';
+}
+
+
+function fotoActual(){
+  const f = {};
+  state.rows.forEach(r => {
+    if(r.tipo === 'Cod' && r.code != null){
+      f[r.code] = [r.desc || '', r.unit || '', r.cta || '', r.aux || ''].join('|');
+    }
+  });
+  return f;
+}
+
+function detectarCambiosExcel(){
+  const clave = LS_SNAP + '_' + (state.maestro || 'PROY');   // una foto por maestro
+  const actual = fotoActual();
+  let previa = null;
+  try{ const raw = localStorage.getItem(clave); if(raw) previa = JSON.parse(raw); }catch(e){}
+  localStorage.setItem(clave, JSON.stringify(actual));
+  if(!previa) return 0;                       // primera visita: solo se guarda la referencia
+
+  const desc = s => (s || '').split('|')[0];
+  let n = 0;
+  // altas
+  Object.keys(actual).forEach(cod => {
+    if(!(cod in previa)){
+      n++; logBit({usuario:'Excel (edición directa)', accion:'Alta detectada', codigo:cod,
+        descNueva:desc(actual[cod]), rama:ramaDeCodigo(cod), estado:'Detectado',
+        obs:'Material nuevo encontrado en el maestro desde la última carga.'});
+    }
+  });
+  // bajas
+  Object.keys(previa).forEach(cod => {
+    if(!(cod in actual)){
+      n++; logBit({usuario:'Excel (edición directa)', accion:'Baja detectada', codigo:cod,
+        descAnt:desc(previa[cod]), rama:ramaDeCodigo(cod), estado:'Detectado',
+        obs:'El material ya no está en el maestro.'});
+    }
+  });
+  // modificaciones
+  Object.keys(actual).forEach(cod => {
+    if(cod in previa && previa[cod] !== actual[cod]){
+      const a = previa[cod].split('|'), b = actual[cod].split('|');
+      const campos = ['descripción','unidad','cuenta','auxiliar']
+        .filter((_,i) => a[i] !== b[i]).join(', ');
+      n++; logBit({usuario:'Excel (edición directa)', accion:'Cambio detectado', codigo:cod,
+        descAnt:a[0], descNueva:b[0], rama:ramaDeCodigo(cod), estado:'Detectado',
+        obs:'Campos modificados: ' + campos});
+    }
+  });
+  return n;
+}
+
+function ramaDeCodigo(cod){
+  const cat = Math.floor(parseInt(cod,10)/1000);
+  for(const f of state.tree){
+    const c = f.cats.find(x => x.code === cat);
+    if(c) return `${f.code} ${f.desc} → ${c.code} ${c.desc}`;
+  }
+  return 'Categoría ' + cat;
+}
+
+function avisarCambios(n){
+  if(!n) return;
+  setTimeout(()=> toast(`Se detectaron ${n} cambio(s) en el maestro desde tu última visita — revísalos en Bitácora.`), 900);
+  const b = $('#btnBitacora');
+  b.classList.remove('btn-ghost'); b.classList.add('btn-green');
+  b.title = `${n} cambio(s) detectados en el Excel`;
+}
+
+/* ---------- reglas / inconsistencias UI ---------- */
+$('#btnRules').onclick = () => {
+  $('#rulesBody').innerHTML = `
+    <div class="inc-item"><b>Estructura del archivo</b><br>
+      Hoja única <code>${state.sheetName}</code> con columnas: Tipo (F/C/Cod), Código, Descripción, Unidad, Cuenta contable, Auxiliar.
+      Jerarquía de 3 niveles: <b>Familia</b> (F, centenas: 100–2300) → <b>Categoría</b> (C, ej. 337) → <b>Material</b> (Cod).</div>
+    <div class="inc-item"><b>Fórmula del código</b><br>
+      <code>código = categoría × 1000 + correlativo</code>. El correlativo es consecutivo de 3 dígitos partiendo en 001.
+      Familias 100–900 generan códigos de 6 dígitos; familias 1000+ generan 7 dígitos.</div>
+    <div class="inc-item"><b>Bloques reservados por subgrupo</b><br>
+      Las categorías 1001, 1003, 1004, 1005 y 1105 agrupan materiales en bloques de correlativos con rangos reservados
+      (ej. 1004: Mobiliario principal 001–016, Mobiliario complementario 026–041, etc.). La app detecta estos bloques
+      automáticamente y propone el siguiente correlativo dentro del bloque elegido.</div>
+    <div class="inc-item"><b>Determinación del correlativo</b><br>
+      Siguiente = máximo correlativo usado en la categoría (o bloque) + 1. Los códigos duplicados o históricos nunca se reutilizan.</div>
+    ${state.inconsistencias.map(i => `<div class="inc-item"><b>${i.tipo}</b><br>${i.det}</div>`).join('')}`;
+  $('#mRules').hidden = false;
+};
+$('#rulesClose').onclick = () => $('#mRules').hidden = true;
+
+/* ---------- guardar / exportar ---------- */
+
+function bitAoa(){
+  return [['Fecha y hora','Usuario','Acción','Código','Descripción anterior','Descripción nueva','Rama','Estado','Observaciones'],
+    ...state.bitacora.map(b => [b.ts,b.usuario,b.accion,b.codigo,b.descAnt,b.descNueva,b.rama,b.estado,b.obs])];
+}
+
+$('#btnExportXlsx').onclick = () => {
+  // Reconstruir hoja maestra con estructura idéntica (6 columnas), nuevos materiales
+  // insertados al final del segmento de su categoría. Los estados/orígenes van en hojas anexas.
+  const aoa = [['Cod', null, 'COSTOS DIRECTOS', null, 'CUENTA CONTABLE', 'AUXILIAR']];
+  state.rows.forEach(r => {
+    aoa.push([r.tipo || null, r.code, r.desc || null, r.unit || null, r.cta || null, r.aux || null]);
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), state.sheetName || 'MM_FFV_REV1');
+
+  const cambios = [['Código','Descripción','Estado','Origen','Descripción original'],
+    ...state.rows.filter(r => r.tipo==='Cod' && (r.origen==='app' || r.estado!=='Vigente'))
+      .map(r => [r.code, r.desc, r.origen==='app'&&r.estado==='Vigente'?'Nuevo':r.estado, r.origen==='app'?'Creado en app':'Archivo original', r.descOriginal||''])];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cambios), 'CAMBIOS');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(bitAoa()), 'BITACORA');
+
+  const stamp = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `MM_FFV_rev2_actualizado_${stamp}.xlsx`);
+  logBit({usuario:$('#userName').value, accion:'Exportación', codigo:'Excel maestro',
+    rama:'—', estado:'Sin cambios', obs:'Descarga del maestro actualizado con hojas CAMBIOS y BITACORA.'});
+  toast('Excel actualizado descargado.');
+};
+
+function exportBit(){
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(bitAoa()), 'BITACORA');
+  const stamp = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `MM_FFV_bitacora_${stamp}.xlsx`);
+  toast('Bitácora exportada.');
+}
+$('#btnExportBit').onclick = exportBit;
+$('#bitExport').onclick = exportBit;
+
+function resetForm(){
+  $('#descHint').style.display='none';
+}
+
+/* ============================================================
+   MODO SHAREPOINT — lectura y escritura vía Power Automate
+   ============================================================ */
+let spMode = false;
+
+async function loadFromSharePoint(){
+  if(!MM_FLOW_LEER) return false;
+  const ov = $('#spLoading'), fill = $('#spLoadingFill'), sub = $('#spLoadingSub');
+  $('#spLoadingMsg').textContent = 'Conectando con SharePoint…';
+  ov.hidden = false; fill.style.width = '25%'; sub.textContent = 'Ejecutando el flujo de Power Automate…';
+  const MAX = 3;
+  try{
+    let res, raw, buf, esZip = false, intento = 0;
+    while(true){
+      intento++;
+      try{
+        // POST simple (sin cabeceras extra) para evitar la pre-consulta CORS
+        // que los triggers HTTP de Power Automate no responden.
+        res = await fetch(MM_FLOW_LEER, {method:'POST'});
+        // Se lee como binario: el flujo puede devolver el .xlsx crudo
+        // (empieza con "PK"), base64, o JSON con las filas.
+        buf = await res.arrayBuffer();
+        const b = new Uint8Array(buf);
+        esZip = b.length > 3 && b[0] === 0x50 && b[1] === 0x4B;   // firma ZIP = archivo xlsx
+        raw = esZip ? '' : new TextDecoder('utf-8').decode(buf);
+        // 5xx = timeout o caída momentánea del conector → reintentar
+        if(res.status >= 500 && intento < MAX){
+          const espera = intento * 4;
+          sub.textContent = `El servidor no respondió a tiempo. Reintentando en ${espera}s (${intento} de ${MAX-1})…`;
+          fill.style.width = (25 + intento*10) + '%';
+          await new Promise(r => setTimeout(r, espera*1000));
+          continue;
+        }
+      }catch(netErr){
+        if(intento < MAX){
+          const espera = intento * 4;
+          sub.textContent = `Sin respuesta. Reintentando en ${espera}s (${intento} de ${MAX-1})…`;
+          await new Promise(r => setTimeout(r, espera*1000));
+          continue;
+        }
+        throw netErr;
+      }
+      break;
+    }
+    fill.style.width = '55%'; sub.textContent = 'Recibiendo respuesta ('+res.status+')…';
+    if(!esZip && (res.status === 202 || !raw.trim())){
+      throw new Error('El flujo respondió VACÍO (HTTP '+res.status+'). Falta la acción "Respuesta" al final del flujo, o no tiene el campo Cuerpo con el contenido del archivo.');
+    }
+    if(!res.ok){
+      if(/quota/i.test(raw)) throw new Error('Power Automate alcanzó su límite de ejecuciones por hoy. Se restablece solo; mientras tanto usa "Importar Excel".');
+      if(/timeout|timed out/i.test(raw)) throw new Error('SharePoint no respondió a tiempo tras varios intentos. Causa más común: el archivo MM_FFV_rev2.xlsx está abierto en Excel — ciérralo y vuelve a intentar. Mientras tanto puedes usar "Importar Excel".');
+      throw new Error('El flujo devolvió HTTP '+res.status+': '+raw.slice(0,160));
+    }
+    let data = null, b64 = null;
+    if(!esZip){
+      try{ data = JSON.parse(raw); }catch(e){ data = null; }
+    }
+
+    /* --- MODO ARCHIVO: el flujo devuelve el .xlsx completo ---
+       Es el modo rápido: una sola acción "Obtener contenido de archivo"
+       en vez de recorrer 900+ filas con el conector de Excel (que provoca
+       los timeouts 502/503 y el corte de filas). El archivo puede llegar
+       como binario crudo (firma PK) o codificado en base64. -------- */
+    if(data && typeof data === 'object' && typeof data.$content === 'string') b64 = data.$content;
+    else if(typeof data === 'string' && data.startsWith('UEsDB')) b64 = data;
+    else if(!data && !esZip && raw.trim().startsWith('UEsDB')) b64 = raw.trim();
+
+    if(esZip || b64){
+      fill.style.width = '80%'; sub.textContent = 'Leyendo el archivo Excel…';
+      await new Promise(r => setTimeout(r, 50));
+      const wbSP = esZip ? XLSX.read(new Uint8Array(buf), {type:'array'})
+                         : XLSX.read(b64, {type:'base64'});
+      state.archivoNombre = 'SharePoint · MM_FFV_rev2.xlsx';
+      leerPermisos(wbSP);
+      leerSolicitudes(wbSP);
+      leerProyectos(wbSP);
+      leerNuevos(wbSP);
+      state.aoas = separarPorHojas(wbSP);
+      aplicarMaestros(true);
+      aplicarPermisos();
+      fill.style.width = '100%'; sub.textContent = 'Listo.';
+      setTimeout(()=>{ ov.hidden = true; fill.style.width='0'; }, 500);
+      return true;
+    }
+
+    /* --- MODO FILAS: compatibilidad con el flujo actual --- */
+    if(!data) throw new Error('La respuesta no es JSON válido ni un archivo Excel. Revisa el Cuerpo de la acción "Respuesta" del flujo.');
+    const list = Array.isArray(data) ? data : (data.value || []);
+    if(!list.length) throw new Error('El flujo respondió sin filas. Revisa que la acción apunte a la tabla TablaMM.');
+    fill.style.width = '80%'; sub.textContent = 'Construyendo el árbol ('+list.length+' filas)…';
+    await new Promise(r => setTimeout(r, 50));
+    // convertir objetos {Tipo,Codigo,Descripcion,Unidad,Cuenta,Auxiliar} a formato AOA
+    const aoa = [['Cod', null, 'COSTOS DIRECTOS', null, 'CUENTA CONTABLE', 'AUXILIAR']];
+    list.forEach(o => {
+      const num = v => { const n = parseInt(String(v??'').trim(),10); return isNaN(n) ? null : n; };
+      aoa.push([
+        (o.Tipo ?? '').toString().trim() || null,
+        num(o.Codigo),
+        o.Descripcion != null && o.Descripcion !== '' ? String(o.Descripcion) : null,
+        o.Unidad   != null && o.Unidad   !== '' ? String(o.Unidad)   : null,
+        o.Cuenta   != null && o.Cuenta   !== '' ? String(o.Cuenta)   : null,
+        o.Auxiliar != null && o.Auxiliar !== '' ? String(o.Auxiliar) : null
+      ]);
+    });
+    state.archivoNombre = 'SharePoint · MM_FFV_rev2.xlsx';
+    state.aoas = separarMaestros(aoa);
+    aplicarMaestros(true);
+    fill.style.width = '100%'; sub.textContent = 'Listo.';
+    setTimeout(()=>{ ov.hidden = true; fill.style.width='0'; }, 500);
+    return true;
+  }catch(err){
+    ov.hidden = true; fill.style.width='0';
+    let msg = err.message;
+    if(/failed to fetch|networkerror|load failed/i.test(msg)){
+      msg = 'El navegador BLOQUEÓ la respuesta (CORS). En la acción "Respuesta" del flujo falta el encabezado Access-Control-Allow-Origin con valor *.';
+    }
+    showSpError(msg);
+    return false;
+  }
+}
+
+function showSpError(msg){
+  toast('No se pudo leer desde SharePoint. Detalle abajo en el chip.', 'err');
+  $('#fileChip').classList.remove('ok');
+  $('#fileName').textContent = '⚠ ' + msg;
+  $('#fileChip').style.maxWidth = '640px';
+  $('#fileChip').title = msg;
+}
+
+function pushToSharePoint(material, bit){
+  if(!MM_FLOW_CREAR) return;
+  // Animación de guardado
+  const ov = $('#spLoading'), fill = $('#spLoadingFill'), sub = $('#spLoadingSub');
+  $('#spLoadingMsg').textContent = 'Guardando en SharePoint…';
+  sub.textContent = `Escribiendo el material ${material.Codigo} en el maestro y la bitácora`;
+  ov.hidden = false; fill.style.width = '35%';
+  setTimeout(()=> fill.style.width = '75%', 350);
+
+  // no-cors: mismo patrón que el flujo "FFV Guardar Avance". El flujo debe
+  // parsear el cuerpo con json(triggerBody()).
+  fetch(MM_FLOW_CREAR, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({material, bitacora: bit})
+  }).then(()=>{
+    fill.style.width = '100%'; sub.textContent = 'Enviado.';
+    setTimeout(()=>{ ov.hidden = true; fill.style.width='0'; }, 450);
+    toast(`Material ${material.Codigo} enviado a SharePoint · Responsable: ${bit.Usuario}`);
+  }).catch(()=>{
+    ov.hidden = true; fill.style.width='0';
+    toast('El material quedó local; falló el envío a SharePoint. Reintenta con Descargar Excel.', 'err');
+  });
+}
+
+$('#btnReload').onclick = () => {
+  if(state.bitacora.some(b => b.accion==='Creación') &&
+     !confirm('Recargar traerá el archivo actual de SharePoint. Los cambios ya enviados aparecerán; los no enviados se restauran desde la sesión guardada. ¿Continuar?')) return;
+  loadFromSharePoint();
+};
+
+/* ============================================================
+   AUTENTICACIÓN MSAL (Entra ID)
+   ============================================================ */
+let msalApp = null;
+
+/* ============================================================
+   IDENTIDAD DEL SOLICITANTE
+   1º Si la página está alojada en SharePoint, se pregunta a la propia
+      sesión quién es (no requiere registro en Entra ID).
+   2º Si hay IDs de Entra configurados, se usa el login Microsoft.
+   3º Si no hay ninguno (pruebas locales), se escribe a mano.
+   ============================================================ */
+async function identificarPorSharePoint(){
+  const hint = $('#hintUser');
+  if(location.protocol === 'file:'){
+    if(hint) hint.textContent = 'Archivo abierto localmente: escribe tu nombre. Al publicarlo en SharePoint se completará solo.';
+    return false;
+  }
+  if(!/\.sharepoint\.com$/i.test(location.hostname)){
+    if(hint) hint.textContent = `La app no está alojada en SharePoint (${location.hostname}), por eso no puede leer tu sesión. Escribe tu nombre.`;
+    return false;
+  }
+  const m = location.pathname.match(/^(\/sites\/[^\/]+)/i);
+  const webUrl = location.origin + (m ? m[1] : '');
+  try{
+    const r = await fetch(webUrl + '/_api/web/currentuser', {
+      headers: {'Accept': 'application/json;odata=nometadata'},
+      credentials: 'include'
+    });
+    if(!r.ok){
+      if(hint) hint.textContent = 'SharePoint no entregó tu identidad (HTTP ' + r.status + '). Escribe tu nombre.';
+      return false;
+    }
+    const d = await r.json();
+    const nombre = d.Title || '';
+    const correo = (d.Email || d.UserPrincipalName || d.LoginName || '').replace(/^i:0#\.f\|membership\|/i, '');
+    if(!nombre && !correo) return false;
+    if(hint) hint.textContent = '';
+    fijarSolicitante(nombre, correo, 'tu sesión de SharePoint');
+    return true;
+  }catch(e){
+    if(hint) hint.textContent = 'No se pudo consultar tu sesión de SharePoint. Escribe tu nombre.';
+    return false;
+  }
+}
+
+async function arrancarIdentidad(silencioso){
+  const gate = $('#loginGate');
+  if(loginObligatorio() && !silencioso) gate.hidden = false;
+  const ok = await identificarPorSharePoint();
+  if(ok){ gate.hidden = true; return true; }
+  if(!loginObligatorio()){ gate.hidden = true; avisarIdentidadManual(); return false; }
+  if(!silencioso) mostrarAcceso();
+  return false;
+}
+
+function avisarIdentidadManual(){
+  const h = $('#hintUser');
+  if(h && !h.textContent) h.textContent = 'No se pudo identificar tu sesión: escribe tu nombre y correo.';
+}
+
+/* Muestra la pantalla de acceso adaptada al escenario real */
+function mostrarAcceso(){
+  const gate = $('#loginGate'), btn = $('#btnLogin'), txt = $('#btnLoginTxt');
+  gate.hidden = false;
+  $('#loginErr').textContent = '';
+
+  if(FFV_CLIENT_ID && FFV_TENANT_ID){
+    // Login Microsoft con ventana emergente (requiere registro en Entra ID)
+    $('#gateTitulo').textContent = 'Inicia sesión para continuar';
+    $('#gateMsg').textContent = 'Necesitas tu cuenta corporativa FFV para acceder al maestro.';
+    txt.textContent = 'Iniciar sesión con Microsoft';
+    btn.disabled = false;
+    btn.onclick = () => { btn.disabled = true; txt.textContent = 'Abriendo Microsoft…'; initAuthPopup(); };
+    $('#btnReintentar').style.display = 'none';
+    initAuth();
+    return;
+  }
+
+  if(/\.sharepoint\.com$/i.test(location.hostname)){
+    // Sin registro en Entra: se usa el portal de acceso del propio SharePoint,
+    // que muestra el login de Microsoft y devuelve a esta misma página.
+    $('#gateTitulo').textContent = 'Inicia sesión para continuar';
+    $('#gateMsg').textContent = 'Se abrirá el acceso de Microsoft y volverás automáticamente a esta pantalla.';
+    txt.textContent = 'Iniciar sesión con Microsoft';
+    btn.disabled = false;
+    btn.onclick = () => {
+      btn.disabled = true; txt.textContent = 'Redirigiendo…';
+      const m = location.pathname.match(/^(\/sites\/[^\/]+)/i);
+      const base = location.origin + (m ? m[1] : '');
+      location.href = base + '/_layouts/15/Authenticate.aspx?Source=' + encodeURIComponent(location.href);
+    };
+    $('#btnReintentar').style.display = '';
+    $('#btnReintentar').onclick = () => arrancarIdentidad();
+    return;
+  }
+
+  // Ni SharePoint ni Entra ID: no hay forma de autenticar desde aquí
+  $('#gateTitulo').textContent = 'Acceso no disponible desde aquí';
+  btn.style.display = 'none';
+  $('#btnReintentar').style.display = 'none';
+  $('#gateMsg').innerHTML = location.protocol === 'file:'
+    ? 'Estás abriendo el archivo desde tu computador. Ábrelo <b>desde la biblioteca de SharePoint de FFV</b> para iniciar sesión.'
+    : `La aplicación está publicada en <b>${esc(location.hostname)}</b>, fuera de SharePoint. Ábrela desde la biblioteca de SharePoint de FFV.`;
+  $('#gateFoot').textContent = 'Si crees que es un error, avisa al equipo de Control de Gestión.';
+}
+
+/* Login con ventana emergente (MSAL) */
+async function initAuthPopup(){
+  try{
+    if(!msalApp) await initAuth();
+    const r = await msalApp.loginPopup({ scopes:['User.Read'] });
+    applyAccount(r.account);
+  }catch(e){
+    $('#loginErr').textContent = 'No se pudo iniciar sesión: ' + e.message;
+    $('#btnLogin').disabled = false;
+    $('#btnLoginTxt').textContent = 'Reintentar con Microsoft';
+  }
+}
+
+function fijarSolicitante(nombre, correo, origen){
+  const etiqueta = (nombre && correo) ? `${nombre} (${correo})` : (nombre || correo);
+  const inp = $('#userName');
+  inp.value = etiqueta;
+  inp.readOnly = true;                    // trazabilidad: no editable
+  inp.title = 'Tomado de ' + origen;
+  const lbl = [...$('#rightPanel').querySelectorAll('label')].find(l => /SOLICITANTE/i.test(l.textContent));
+  if(lbl) lbl.textContent = 'Solicitante (sesión iniciada)';
+  localStorage.setItem('mm_ffv_user', etiqueta);
+  state.correoUsuario = (correo || '').toLowerCase();
+  if(correo){
+    const m = $('#userMail');
+    m.value = correo; m.readOnly = true; m.title = 'Tomado de ' + origen;
+  }
+  aplicarPermisos();
+}
+
+async function initAuth(){
+  if(!FFV_CLIENT_ID || !FFV_TENANT_ID) return;           // sin IDs → modo manual
+  if(location.protocol === 'file:') return;   // el login no funciona sobre file://
+  try{
+    msalApp = new msal.PublicClientApplication({
+      auth:{
+        clientId: FFV_CLIENT_ID,
+        authority: 'https://login.microsoftonline.com/' + FFV_TENANT_ID,
+        redirectUri: window.location.origin + window.location.pathname
+      },
+      cache:{ cacheLocation:'localStorage' }
+    });
+    await msalApp.initialize();
+    const accs = msalApp.getAllAccounts();
+    if(accs.length) applyAccount(accs[0]);                // sesión previa recordada
+  }catch(e){
+    $('#loginErr').textContent = 'Error iniciando autenticación: ' + e.message;
+  }
+}
+
+
+
+function applyAccount(acc){
+  const correo = (acc.username || '').toLowerCase();
+  // Validación de dominio: solo cuentas FFV
+  const dominioOk = DOMINIOS_PERMITIDOS.some(d => correo.endsWith('@' + d));
+  if(!dominioOk && DOMINIOS_PERMITIDOS.length){
+    $('#loginErr').textContent = `La cuenta ${correo} no pertenece al dominio FFV. Inicia sesión con tu cuenta corporativa.`;
+    if(msalApp) msalApp.logoutPopup().catch(()=>{});
+    return;
+  }
+  $('#loginGate').hidden = true;
+  const nombre = acc.name || acc.username;
+  fijarSolicitante(nombre, acc.username || '', 'tu sesión Microsoft');
+  toast('Sesión iniciada: ' + nombre + (state.rol && state.rol !== ROL_POR_DEFECTO ? ' · rol ' + state.rol : ''));
+}
+
+/* arranque: si hay URL de lectura configurada, cargar automáticamente */
+window.addEventListener('DOMContentLoaded', () => {
+  pintarBotonTema();
+  $('#btnTheme').onclick = () => {
+    const nuevo = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = nuevo;
+    localStorage.setItem('mm_ffv_theme', nuevo);
+    pintarBotonTema();
+  };
+  $('#mPreview').querySelector('h3').textContent = 'Revisar solicitud';
+  $('#pvConfirm').textContent = 'Enviar a TI y Contabilidad';
+  poblarProyectos();
+  // recordar el responsable entre sesiones
+  if(!$('#userName').readOnly) $('#userName').value = localStorage.getItem('mm_ffv_user') || '';
+  if(!$('#userMail').readOnly) $('#userMail').value = localStorage.getItem('mm_ffv_mail') || '';
+  $('#userMail').addEventListener('input', e => {
+    if(!e.target.readOnly) localStorage.setItem('mm_ffv_mail', e.target.value.trim());
+  });
+  $('#userName').addEventListener('input', e => {
+    if(!e.target.readOnly) localStorage.setItem('mm_ffv_user', e.target.value.trim());
+  });
+  arrancarIdentidad();
+  if(MM_FLOW_LEER) loadFromSharePoint();
+});
+
+/* cerrar modales con Escape */
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') $$('.modal').forEach(m => m.hidden = true);
+});
+</script>
+</body>
+</html>
